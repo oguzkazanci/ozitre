@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -66,6 +67,18 @@ public class EventsServiceImpl implements EventsService {
 
     @Override
     public EventsDto addEvent(EventsDto eventsDto, String username, Long companyId) {
+        Date inputDate = eventsDto.getDate();
+
+        LocalDateTime localDateTime = inputDate.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime()
+                .withHour(9)
+                .withMinute(0)
+                .withSecond(0)
+                .withNano(0);
+
+        eventsDto.setDate(Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant()));
+
         EventsEntity event = modelMapper.map(eventsDto, EventsEntity.class);
         event.setCreatedDate(new Date());
         event.setCreatedBy(username);
@@ -79,6 +92,7 @@ public class EventsServiceImpl implements EventsService {
         }
         return modelMapper.map(event, EventsDto.class);
     }
+
    // TODO düzenlenecek
     @Override
     public void addEventNew(EventsDto eventsDto, BigDecimal paymentAmount, String username, Long companyId) {
