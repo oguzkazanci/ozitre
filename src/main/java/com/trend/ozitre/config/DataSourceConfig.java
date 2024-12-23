@@ -26,7 +26,7 @@ public class DataSourceConfig {
         dataSource.setUrl("jdbc:mysql://tdadb.che2ugqiy5fw.us-east-2.rds.amazonaws.com:3306/tda?useSSL=false");
         dataSource.setUsername("admin");
         dataSource.setPassword("devosoft1");
-        
+
         return dataSource;
     }
 /*
