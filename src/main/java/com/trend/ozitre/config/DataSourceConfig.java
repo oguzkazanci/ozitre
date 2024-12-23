@@ -18,7 +18,7 @@ public class DataSourceConfig {
         dataSource.setPassword("trnddrs");
         return dataSource;
     }*/
-
+/*
     @Bean
     public DataSource dataSource() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
@@ -26,6 +26,17 @@ public class DataSourceConfig {
         dataSource.setUrl("jdbc:mysql://tdadb.che2ugqiy5fw.us-east-2.rds.amazonaws.com:3306/tda?useSSL=false");
         dataSource.setUsername("admin");
         dataSource.setPassword("devosoft1");
+
+        return dataSource;
+    } */
+
+    @Bean
+    public DataSource dataSource() {
+        DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        dataSource.setUrl("jdbc:mysql://35.225.151.93:3306/tda?useSSL=false");
+        dataSource.setUsername("root");
+        dataSource.setPassword("devo");
 
         return dataSource;
     }
