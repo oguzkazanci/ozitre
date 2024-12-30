@@ -1,1 +1,1 @@
-web: java -Dserver.port=$PORT $JAVA_OPTS -jar target/ozitre-0.0.1-SNAPSHOT.jar
+web: java -Dserver.port=$PORT $JAVA_OPTS -Dspring.datasource.url=jdbc:mysql://35.225.151.93:3306/tda -Dspring.datasource.username=root -Dspring.datasource.password=devo -Dspring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver -jar target/ozitre-0.0.1-SNAPSHOT.jar
