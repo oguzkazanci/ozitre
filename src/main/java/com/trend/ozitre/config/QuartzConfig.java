@@ -64,7 +64,7 @@ public class QuartzConfig {
         return TriggerBuilder.newTrigger()
                 .forJob(repeatingEnrollmentJobDetail())
                 .withIdentity("repeatingEnrollmentTrigger")
-                .withSchedule(CronScheduleBuilder.cronSchedule("0 30 06 * * ?"))
+                .withSchedule(CronScheduleBuilder.cronSchedule("0 45 17 * * ?"))
                 .build();
     }
 
@@ -73,7 +73,7 @@ public class QuartzConfig {
         return TriggerBuilder.newTrigger()
                 .forJob(repeatingExpenseJobDetail())
                 .withIdentity("repeatingExpenseTrigger")
-                .withSchedule(CronScheduleBuilder.cronSchedule("0 45 06 * * ?"))
+                .withSchedule(CronScheduleBuilder.cronSchedule("0 50 17 * * ?"))
                 .build();
     }
 
