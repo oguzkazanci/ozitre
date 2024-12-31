@@ -123,7 +123,9 @@ public class EventsServiceImpl implements EventsService {
         //updateStudent
         updatePayment(eventsDto.getEventId(), 0, eventsDto.getEventStatus(), username, eventsDto.getPriceToTeacher());
         //updateTeacher
-        updatePayment(eventsDto.getEventId(), 1, eventsDto.getEventStatus(), username, eventsDto.getPriceToTeacher());
+        if (eventsDto.getPriceToTeacher().equals(true)) {
+            updatePayment(eventsDto.getEventId(), 1, eventsDto.getEventStatus(), username, eventsDto.getPriceToTeacher());
+        }
 
         return modelMapper.map(eventsRepository.save(event), EventsDto.class);
     }
