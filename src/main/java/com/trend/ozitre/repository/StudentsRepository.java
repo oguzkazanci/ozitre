@@ -9,8 +9,8 @@ import java.util.List;
 
 public interface StudentsRepository extends JpaRepository<StudentsEntity,Long> {
 
-    List<StudentsEntity> findByCompanyIdOrderByStudentIdAsc(Long companyId);
-    List<StudentsEntity> findByCompanyIdAndRegStateEquals(Long companyId, Integer regState);
+    List<StudentsEntity> findByCompanyIdAndSeasonIdOrderByStudentIdAsc(Long companyId, Long seasonId);
+    List<StudentsEntity> findByCompanyIdAndSeasonIdAndRegStateEquals(Long companyId, Long seasonId,Integer regState);
     Long countByCompanyIdAndRegState(Long companyId, Integer regState);
     List<StudentsEntity> findByPackageIdIsNotNull();
 }

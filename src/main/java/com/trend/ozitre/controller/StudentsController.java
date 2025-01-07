@@ -42,29 +42,31 @@ public class StudentsController {
     private NormalEnrollmentService nEnrollmentService;
 
     @CrossOrigin
-    @GetMapping(value = "/{companyId}")
+    @GetMapping(value = "/{companyId}/{seasonId}")
     public ResponseEntity<List<StudentsDto>> getAllStudents(@PathVariable("companyId") Long companyId,
+                                                            @PathVariable("seasonId") Long seasonId,
                                                             Authentication authentication) throws IOException, ParseException {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
         if (userDetails.getAuthorities().stream().anyMatch(authority -> authority.getAuthority().equals("ADMIN") ||
                 authority.getAuthority().equals(Role.TEACHER.toString()))) {
-            return ResponseEntity.ok(studentsService.getStudents(companyId));
+            return ResponseEntity.ok(studentsService.getStudents(companyId, seasonId));
         } else {
             throw new AccessDeniedException("Yetkiniz yok.");
         }
     }
 
     @CrossOrigin
-    @GetMapping(value = "/state/{state}/{companyId}")
+    @GetMapping(value = "/state/{state}/{companyId}/{seasonId}")
     public ResponseEntity<List<StudentsDto>> getAllStudentsByRegState(@PathVariable("state") Integer regState,
                                                                       @PathVariable("companyId") Long companyId,
+                                                                      @PathVariable("seasonId") Long seasonId,
                                                                       Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
         if (userDetails.getAuthorities().stream().anyMatch(authority -> authority.getAuthority().equals("ADMIN") ||
                 authority.getAuthority().equals(Role.TEACHER.toString()))) {
-            return ResponseEntity.ok(studentsService.getStudentsByRegState(regState, companyId));
+            return ResponseEntity.ok(studentsService.getStudentsByRegState(regState, companyId, seasonId));
         } else {
             throw new AccessDeniedException("Yetkiniz yok.");
         }

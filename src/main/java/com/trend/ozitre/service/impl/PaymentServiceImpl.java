@@ -118,7 +118,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public byte[] getPaymentPdf(Long studentId, Integer month) throws IOException, ParseException, URISyntaxException {
+    public byte[] getPaymentPdf(Long studentId, Integer month, Long seasonId) throws IOException, ParseException, URISyntaxException {
         URL res = getClass().getResource("/trendders-logo-xl.png");
         assert res != null;
 
@@ -148,7 +148,7 @@ public class PaymentServiceImpl implements PaymentService {
         paymentPdfCreatorService.createAddress(studentId);
         //Address end
 
-        List<EventWithPaymentDto> eventsWithPayments = eventsService.getEventsByStudentId(studentId, month);
+        List<EventWithPaymentDto> eventsWithPayments = eventsService.getEventsByStudentId(studentId, seasonId, month);
 
         List<EventsDto> enrollmentEvents = new ArrayList<>();
         List<EventsDto> packageEvents = new ArrayList<>();
@@ -189,9 +189,10 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public byte[] getPaymentExcel(Long studentId, Integer month) throws IOException {
-        List<Date> monthToDate = eventsService.monthToDate(month + 1);
-        List<EventsEntity> events = eventsRepository.findByDateBetweenAndStudentIdAndEventStatus(monthToDate.get(0), monthToDate.get(1), studentId, true);
+    public byte[] getPaymentExcel(Long studentId, Integer month, Long seasonId) throws IOException {
+        List<Date> monthToDate = eventsService.monthToDate(month + 1, seasonId);
+        List<EventsEntity> events = eventsRepository.findByDateBetweenAndStudentIdAndEventStatus(monthToDate.get(0), monthToDate.get(1),
+                studentId, true);
         return csvExcelCreatorService.createPaymentExcel(events, studentId).toByteArray();
     }
 
@@ -212,7 +213,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public List<PaymentDto> getExpenseTotalState(ExpenseRequest expenseRequest) {
-        List<Date> getMonthToDate = eventsService.monthToDate(expenseRequest.getMonth() + 1);
+        List<Date> getMonthToDate = eventsService.monthToDate(expenseRequest.getMonth() + 1, expenseRequest.getSeasonId());
         List<PaymentEntity> paymentList = paymentRepository.findByPaymentTypeAndPaymentStatusAndCreatedDateBetweenAndCompanyId(expenseRequest.getPaymentType().intValue(),
                 expenseRequest.getPaymentStatus().intValue(), getMonthToDate.get(0), getMonthToDate.get(1), expenseRequest.getCompanyId());
         PaymentEntity teacherPayment = new PaymentEntity();
@@ -224,14 +225,18 @@ public class PaymentServiceImpl implements PaymentService {
         paymentList.removeIf(payment1 -> {
             if (payment1.getPaymentType().equals(1) && payment1.getPaymentStatus().equals(0)) {
                 teacherPayment.setExplanation("Öğretmen");
-                teacherPayment.setPaymentAmount(teacherPayment.getPaymentAmount() + payment1.getRemainingAmount());
+                Long remainingAmount = payment1.getRemainingAmount();
+                if (remainingAmount == null) remainingAmount = 0L;
+                teacherPayment.setPaymentAmount(teacherPayment.getPaymentAmount() + remainingAmount);
                 teacherPayment.setPaymentQuantity(teacherPayment.getPaymentQuantity() + 1);
                 teacherPayment.setPaymentDate(payment1.getPaymentDate());
                 teacherPayment.setPaymentMethodId(payment1.getPaymentMethodId());
                 teacherPayment.setPaymentStatus(0);
                 if (payment1.getRemainingAmount() != null && payment1.getRemainingAmount() > 0) {
                     teacherPayment1.setExplanation("Öğretmen");
-                    teacherPayment1.setPaymentAmount(teacherPayment1.getPaymentAmount() + payment1.getAmountReceived());
+                    Long receivedAmount = payment1.getAmountReceived();
+                    if (receivedAmount == null) receivedAmount = 0L;
+                    teacherPayment1.setPaymentAmount(teacherPayment1.getPaymentAmount() + receivedAmount);
                     teacherPayment1.setPaymentQuantity(teacherPayment1.getPaymentQuantity() + 1);
                     teacherPayment1.setPaymentDate(payment1.getPaymentDate());
                     teacherPayment1.setPaymentMethodId(payment1.getPaymentMethodId());
@@ -240,7 +245,9 @@ public class PaymentServiceImpl implements PaymentService {
                 return true;
             } else if (payment1.getPaymentType().equals(1) && payment1.getPaymentStatus().equals(1)) {
                 teacherPayment1.setExplanation("Öğretmen");
-                teacherPayment1.setPaymentAmount(teacherPayment1.getPaymentAmount() + payment1.getAmountReceived());
+                Long receivedAmount = payment1.getAmountReceived();
+                if (receivedAmount == null) receivedAmount = 0L;
+                teacherPayment1.setPaymentAmount(teacherPayment1.getPaymentAmount() + receivedAmount);
                 teacherPayment1.setPaymentQuantity(teacherPayment1.getPaymentQuantity() + 1);
                 teacherPayment1.setPaymentDate(payment1.getPaymentDate());
                 teacherPayment1.setPaymentMethodId(payment1.getPaymentMethodId());

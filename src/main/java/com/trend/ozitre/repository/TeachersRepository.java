@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface TeachersRepository extends JpaRepository<TeacherEntity,Long> {
 
-    List<TeacherEntity> findByCompanyIdOrderByTeacherIdAsc(Long companyId);
+    List<TeacherEntity> findByCompanyIdAndSeasonIdOrderByTeacherIdAsc(Long companyId, Long seasonId);
     List<TeacherEntity> findByCompanyIdAndTeacherStateEquals(Long companyId, Integer teacherState);
     List<TeacherEntity> findByLessons_LessonIdAndTeacherStateAndCompanyId(Long teacherLessonId, Integer teacherState, Long companyId);
 

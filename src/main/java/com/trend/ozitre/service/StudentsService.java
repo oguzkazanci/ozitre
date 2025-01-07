@@ -9,9 +9,9 @@ import java.util.List;
 
 public interface StudentsService {
 
-    List<StudentsDto> getStudents(Long companyId) throws IOException, ParseException;
+    List<StudentsDto> getStudents(Long companyId, Long seasonId) throws IOException, ParseException;
 
-    List<StudentsDto> getStudentsByRegState(Integer regState, Long companyId);
+    List<StudentsDto> getStudentsByRegState(Integer regState, Long companyId, Long seasonId);
 
     StudentsDto getStudent(Long id);
 

@@ -31,7 +31,7 @@ public class CompanyController {
 
     @CrossOrigin
     @PostMapping("/save")
-    public ResponseEntity<CompanyDto> saveGivenBook(@RequestBody CompanyDto company,
+    public ResponseEntity<CompanyDto> saveCompany(@RequestBody CompanyDto company,
                                                     Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 

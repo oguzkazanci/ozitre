@@ -18,9 +18,9 @@ public interface PaymentService {
 
     PaymentDto getPaymentByEventIdAndStatus(Long eventId, Integer paymentType,Integer paymentStatus);
 
-    byte[] getPaymentPdf(Long studentId, Integer month) throws IOException, ParseException, URISyntaxException;
+    byte[] getPaymentPdf(Long studentId, Integer month, Long seasonId) throws IOException, ParseException, URISyntaxException;
 
-    byte[] getPaymentExcel(Long studentId, Integer month) throws IOException, ParseException;
+    byte[] getPaymentExcel(Long studentId, Integer month, Long seasonId) throws IOException, ParseException;
 
     Long getTotalAmount(Long type, Long companyId);
 

@@ -10,4 +10,5 @@ public class ExpenseRequest {
     private Long paymentType;
     private Integer month;
     private Long companyId;
+    private Long seasonId;
 }

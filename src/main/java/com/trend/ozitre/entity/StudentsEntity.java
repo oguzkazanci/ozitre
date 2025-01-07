@@ -75,4 +75,7 @@ public class StudentsEntity extends BaseEntity {
 
     @Column(name = "company_id")
     private Long companyId;
+
+    @Column(name = "season_id")
+    private Long seasonId;
 }

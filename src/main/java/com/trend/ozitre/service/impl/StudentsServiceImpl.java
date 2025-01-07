@@ -66,14 +66,14 @@ public class StudentsServiceImpl implements StudentsService {
     private PasswordEncoder passwordEncoder;
 
     @Override
-    public List<StudentsDto> getStudents(Long companyId) {
-        List<StudentsEntity> students = studentsRepository.findByCompanyIdOrderByStudentIdAsc(companyId);
+    public List<StudentsDto> getStudents(Long companyId, Long seasonId) {
+        List<StudentsEntity> students = studentsRepository.findByCompanyIdAndSeasonIdOrderByStudentIdAsc(companyId, seasonId);
         return students.stream().map(student -> modelMapper.map(student, StudentsDto.class)).collect(Collectors.toList());
     }
 
     @Override
-    public List<StudentsDto> getStudentsByRegState(Integer regState, Long companyId) {
-        List<StudentsEntity> students = studentsRepository.findByCompanyIdAndRegStateEquals(companyId, regState);
+    public List<StudentsDto> getStudentsByRegState(Integer regState, Long companyId, Long seasonId) {
+        List<StudentsEntity> students = studentsRepository.findByCompanyIdAndSeasonIdAndRegStateEquals(companyId, seasonId, regState);
         return students.stream().map(student -> modelMapper.map(student, StudentsDto.class)).collect(Collectors.toList());
     }
 

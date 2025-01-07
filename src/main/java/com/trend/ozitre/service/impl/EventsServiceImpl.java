@@ -1,12 +1,10 @@
 package com.trend.ozitre.service.impl;
 
 import com.trend.ozitre.dto.*;
-import com.trend.ozitre.entity.EventsEntity;
-import com.trend.ozitre.entity.PaymentEntity;
-import com.trend.ozitre.entity.StudentsEntity;
-import com.trend.ozitre.entity.TeacherEntity;
+import com.trend.ozitre.entity.*;
 import com.trend.ozitre.repository.EventsRepository;
 import com.trend.ozitre.repository.PaymentRepository;
+import com.trend.ozitre.repository.SeasonsRepository;
 import com.trend.ozitre.repository.StudentsRepository;
 import com.trend.ozitre.service.EventsService;
 import com.trend.ozitre.service.PaymentService;
@@ -36,6 +34,8 @@ public class EventsServiceImpl implements EventsService {
     private final PaymentRepository paymentRepository;
 
     private final StudentsRepository studentsRepository;
+
+    private final SeasonsRepository seasonsRepository;
 
     private final TeachersService teachersService;
 
@@ -145,9 +145,10 @@ public class EventsServiceImpl implements EventsService {
     }
 
     @Override
-    public List<EventWithPaymentDto> getEventsByStudentId(Long studentId, Integer month) {
-        List<Date> monthToDate = monthToDate(month + 1);
-        List<EventsEntity> events = eventsRepository.findByDateBetweenAndStudentIdAndEventStatus(monthToDate.get(0), monthToDate.get(1), studentId, true);
+    public List<EventWithPaymentDto> getEventsByStudentId(Long studentId, Long seasonId, Integer month) {
+        List<Date> monthToDate = monthToDate(month + 1, seasonId);
+        List<EventsEntity> events = eventsRepository.findByDateBetweenAndStudentIdAndEventStatus(monthToDate.get(0),
+                monthToDate.get(1), studentId, true);
 
         return events.stream().map(event -> {
             // EventsDto oluştur
@@ -282,14 +283,47 @@ public class EventsServiceImpl implements EventsService {
     }
 
     @Override
+    public List<Date> monthToDate(Integer month, Long seasonId) {
+        Optional<SeasonsEntity> season = seasonsRepository.findById(seasonId);
+
+        LocalDate ilkGun;
+        LocalDate sonGun;
+
+        if (season.isPresent()) {
+            SeasonsEntity thisSeason = season.get();
+            int year;
+
+            if (month >= 8) {
+                year = thisSeason.getStartDate().toInstant()
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate()
+                        .getYear();
+            } else {
+                year = thisSeason.getEndDate().toInstant()
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate()
+                        .getYear();
+            }
+
+            ilkGun = LocalDate.of(year, month, 1);
+        } else {
+            ilkGun = LocalDate.of(LocalDate.now().getYear(), month, 1);
+        }
+        sonGun = ilkGun.plusDays(ilkGun.getMonth().length(ilkGun.isLeapYear()) - 1);
+
+        List<Date> dates = new ArrayList<>();
+        dates.add(Date.from(ilkGun.atStartOfDay(ZoneId.systemDefault()).toInstant()));
+        dates.add(Date.from(sonGun.atStartOfDay(ZoneId.systemDefault()).toInstant()));
+
+        return dates;
+    }
+
+    @Override
     public List<Date> monthToDate(Integer month) {
-        // Ayın ilk gününü oluştur
         LocalDate ilkGun = LocalDate.of(LocalDate.now().getYear(), month, 1);
 
-        // Ayın son gününü oluştur
         LocalDate sonGun = ilkGun.plusDays(ilkGun.getMonth().length(ilkGun.isLeapYear()) - 1);
 
-        // İlk ve son günü bir listeye ekle
         List<Date> tarihler = new ArrayList<>();
         tarihler.add(Date.from(ilkGun.atStartOfDay(ZoneId.systemDefault()).toInstant()));
         tarihler.add(Date.from(sonGun.atStartOfDay(ZoneId.systemDefault()).toInstant()));

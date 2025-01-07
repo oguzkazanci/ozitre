@@ -27,7 +27,7 @@ public interface EventsService {
 
     EventsDto addRoutineEvent(EventsDto eventsDto, Long repeatIntervalDays, String username, Long companyId);
 
-    List<EventWithPaymentDto> getEventsByStudentId(Long studentId, Integer month) throws ParseException;
+    List<EventWithPaymentDto> getEventsByStudentId(Long studentId, Long seasonId, Integer month) throws ParseException;
 
     List<EventsDto> getEventsByTeacherId(Long teacherId, Integer month) throws ParseException;
 
@@ -36,6 +36,8 @@ public interface EventsService {
     EventsDto getLastEventByTeacherId(Long teacherId);
 
     Long getSizeOfEvents(Long companyId);
+
+    List<Date> monthToDate(Integer month, Long seasonId);
 
     List<Date> monthToDate(Integer month);
 }

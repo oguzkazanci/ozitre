@@ -37,8 +37,8 @@ public class TeachersServiceImpl implements TeachersService {
     private PasswordEncoder passwordEncoder;
 
     @Override
-    public List<TeachersDto> getTeachers(Long companyId) {
-        List<TeacherEntity> teacherEntities = teachersRepository.findByCompanyIdOrderByTeacherIdAsc(companyId);
+    public List<TeachersDto> getTeachers(Long companyId, Long seasonId) {
+        List<TeacherEntity> teacherEntities = teachersRepository.findByCompanyIdAndSeasonIdOrderByTeacherIdAsc(companyId, seasonId);
         return teacherEntities.stream().map(teacher -> modelMapper.map(teacher, TeachersDto.class)).collect(Collectors.toList());
     }
 

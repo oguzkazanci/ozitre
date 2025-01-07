@@ -19,13 +19,14 @@ public class TeachersController {
 
     private final TeachersService teachersService;
 
-    @GetMapping(value = "/{companyId}")
+    @GetMapping(value = "/{companyId}/{seasonId}")
     public ResponseEntity<List<TeachersDto>> getAllTeachers(@PathVariable("companyId") Long companyId,
+                                                            @PathVariable("seasonId") Long seasonId,
                                                             Authentication authentication){
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
         if (userDetails.getAuthorities().stream().anyMatch(authority -> authority.getAuthority().equals("ADMIN"))) {
-            return ResponseEntity.ok(teachersService.getTeachers(companyId));
+            return ResponseEntity.ok(teachersService.getTeachers(companyId, seasonId));
         } else {
             throw new AccessDeniedException("Yetkiniz yok.");
         }

@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface TeachersService {
 
-    List<TeachersDto> getTeachers(Long companyId);
+    List<TeachersDto> getTeachers(Long companyId, Long seasonId);
 
     TeacherEntity getTeacher(Long id);
 

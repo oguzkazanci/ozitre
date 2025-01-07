@@ -84,28 +84,30 @@ public class PaymentController {
     }
 
     @CrossOrigin
-    @GetMapping("/getPaymentPDF/{studentId}")
+    @GetMapping("/getPaymentPDF/{seasonId}/{studentId}")
     public byte[] getPDF(@PathVariable("studentId") Long studentId,
+                         @PathVariable("seasonId") Long seasonId,
                          @RequestParam Integer month,
                          Authentication authentication) throws IOException, ParseException, URISyntaxException {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
         if(userDetails.getAuthorities().stream().anyMatch((authority -> authority.getAuthority().equals("ADMIN")))) {
-            return paymentService.getPaymentPdf(studentId, month);
+            return paymentService.getPaymentPdf(studentId, month, seasonId);
         } else {
             throw new AccessDeniedException("Yetkiniz yok.");
         }
     }
 
     @CrossOrigin
-    @GetMapping("/getPaymentExcel/{studentId}")
+    @GetMapping("/getPaymentExcel/{seasonId}/{studentId}")
     public byte[] getExcel(@PathVariable("studentId") Long studentId,
-                         @RequestParam Integer month,
-                         Authentication authentication) throws IOException, ParseException {
+                           @PathVariable("seasonId") Long seasonId,
+                           @RequestParam Integer month,
+                           Authentication authentication) throws IOException, ParseException {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
         if(userDetails.getAuthorities().stream().anyMatch((authority -> authority.getAuthority().equals("ADMIN")))) {
-            return paymentService.getPaymentExcel(studentId, month);
+            return paymentService.getPaymentExcel(studentId, month, seasonId);
         } else {
             throw new AccessDeniedException("Yetkiniz yok.");
         }
