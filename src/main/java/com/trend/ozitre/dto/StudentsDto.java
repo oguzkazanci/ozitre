@@ -27,4 +27,5 @@ public class StudentsDto {
     private Integer startMonth;
     private Integer installment;
     private Long companyId;
+    private Long seasonId;
 }

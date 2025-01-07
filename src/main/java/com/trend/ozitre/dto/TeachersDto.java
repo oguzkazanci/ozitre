@@ -22,4 +22,5 @@ public class TeachersDto {
     private Long teacherBaseFee;
     private String explanation;
     private Long companyId;
+    private Long seasonId;
 }
