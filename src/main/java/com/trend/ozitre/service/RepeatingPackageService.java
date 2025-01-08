@@ -47,12 +47,11 @@ public class RepeatingPackageService implements Job {
         for (StudentsEntity student: studentsEntities) {
             int month = student.getStartMonth();
             LocalDate localDate = student.getCreatedDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            int year = localDate.getYear();
-            LocalDate givenDate = LocalDate.of(year, month, 1);
+            LocalDate givenDate = LocalDate.of(localDate.getYear(), month, 1);
             LocalDate currentDate = LocalDate.now();
 
             if (currentDate.isAfter(givenDate)) {
-                givenDate = LocalDate.of(year, currentDate.getMonthValue(), 1);
+                givenDate = LocalDate.of(currentDate.getYear(), currentDate.getMonthValue(), 1);
                 EventsDto event = new EventsDto();
                 event.setStudentId(student.getStudentId());
                 event.setEventStatus(true);
