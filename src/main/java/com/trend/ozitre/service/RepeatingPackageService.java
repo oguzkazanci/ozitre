@@ -55,6 +55,7 @@ public class RepeatingPackageService implements Job {
                 EventsDto event = new EventsDto();
                 event.setStudentId(student.getStudentId());
                 event.setEventStatus(true);
+                event.setPriceToTeacher(false);
                 event.setDate(Date.from(givenDate.atStartOfDay(ZoneId.systemDefault()).toInstant()));
                 event.setTitle("Paket Dersi Düzenli");
                 BigDecimal price = BigDecimal.valueOf(student.getTotalPrice() / student.getInstallment());
