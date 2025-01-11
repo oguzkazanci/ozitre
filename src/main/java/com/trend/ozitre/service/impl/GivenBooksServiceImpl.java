@@ -38,8 +38,9 @@ public class GivenBooksServiceImpl implements GivenBooksService {
     }
 
     @Override
-    public List<GivenBooksDto> getGivenBooksByStudentIdAndLessonId(Long studentId, Long lessonId) {
-        List<GivenBooksEntity> givenBooksEntities = givenBooksRepository.findByStudentIdAndLessonId(studentId, lessonId);
+    public List<GivenBooksDto> getGivenBook(Long studentId, Long lessonId, Long gradeId) {
+        List<GivenBooksEntity> givenBooksEntities = givenBooksRepository.findByStudentIdAndLessonIdAndGradeId(studentId,
+                lessonId, gradeId);
         return givenBooksEntities.stream().map(givenBooks -> modelMapper.map(givenBooks, GivenBooksDto.class)).collect(Collectors.toList());
     }
 

@@ -45,15 +45,16 @@ public class GivenBooksController {
     }
 
     @CrossOrigin
-    @GetMapping("/getByStudentIdAndLessonId/{studentId}/{lessonId}")
+    @GetMapping("/getGivenBook/{studentId}/{lessonId}/{gradeId}")
     private ResponseEntity<List<GivenBooksDto>> getGivenBooksByStudentId(@PathVariable("studentId") Long studentId,
                                                                          @PathVariable("lessonId") Long lessonId,
+                                                                         @PathVariable("gradeId") Long gradeId,
                                                                          Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
         if (userDetails.getAuthorities().stream().anyMatch(authority -> authority.getAuthority().equals("ADMIN") ||
                 authority.getAuthority().equals(Role.TEACHER.toString()))) {
-            return ResponseEntity.ok(givenBooksService.getGivenBooksByStudentIdAndLessonId(studentId, lessonId));
+            return ResponseEntity.ok(givenBooksService.getGivenBook(studentId, lessonId, gradeId));
         } else {
             throw new AccessDeniedException("Yetkiniz yok.");
         }

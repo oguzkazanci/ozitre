@@ -171,11 +171,21 @@ public class EventsServiceImpl implements EventsService {
 
 
     @Override
-    public List<EventsDto> getEventsByTeacherId(Long teacherId, Integer month) {
-        List<Date> monthToDate = monthToDate(month + 1);
+    public List<EventWithPaymentDto> getEventsByTeacherId(Long teacherId, Long seasonId, Integer month) {
+        List<Date> monthToDate = monthToDate(month + 1, seasonId);
         List<EventsEntity> events = eventsRepository.findByDateBetweenAndTeacherIdAndEventStatusAndPriceToTeacher(monthToDate.get(0),
                 monthToDate.get(1), teacherId, true, true);
-        return events.stream().map(event -> modelMapper.map(event, EventsDto.class)).collect(Collectors.toList());
+
+        return events.stream().map(event -> {
+            EventsDto eventDto = modelMapper.map(event, EventsDto.class);
+            PaymentDto paymentDto = paymentService.getPaymentByEventId(event.getEventId(), 1);
+
+            EventWithPaymentDto eventWithPaymentDto = new EventWithPaymentDto();
+            eventWithPaymentDto.setEvent(eventDto);
+            eventWithPaymentDto.setPayment(paymentDto);
+
+            return eventWithPaymentDto;
+        }).collect(Collectors.toList());
     }
 
     @Override

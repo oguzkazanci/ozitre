@@ -29,7 +29,7 @@ public interface EventsService {
 
     List<EventWithPaymentDto> getEventsByStudentId(Long studentId, Long seasonId, Integer month) throws ParseException;
 
-    List<EventsDto> getEventsByTeacherId(Long teacherId, Integer month) throws ParseException;
+    List<EventWithPaymentDto> getEventsByTeacherId(Long teacherId, Long seasonId, Integer month) throws ParseException;
 
     EventsDto getLastEventByStudentId(Long studentId);
 

@@ -10,7 +10,7 @@ public interface GivenBooksService {
 
     List<GivenBooksDto> getGivenBooksByStudentId(Long studentId);
 
-    List<GivenBooksDto> getGivenBooksByStudentIdAndLessonId(Long studentId, Long lessonId);
+    List<GivenBooksDto> getGivenBook(Long studentId, Long lessonId, Long gradeId);
 
     List<String[]> getLessonsByStudentId(Long studentId);
 

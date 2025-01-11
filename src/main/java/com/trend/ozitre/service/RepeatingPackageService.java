@@ -74,6 +74,7 @@ public class RepeatingPackageService implements Job {
             event.setEventStatus(true);
             event.setDate(Date.from(givenDate.atStartOfDay(ZoneId.systemDefault()).toInstant()));
             event.setTitle("Öğretmen Düzenli Ödeme");
+            event.setPriceToTeacher(true);
             Optional<EventsEntity> isEvent = eventsRepository.findByTeacherIdAndDateAndEventStatusAndTitle(event.getTeacherId(), event.getDate(), event.getEventStatus(), event.getTitle());
             if (isEvent.isEmpty()) {
                 eventsService.addTeacherPayment(event, teacher, teacher.getCreatedBy(), teacher.getCompanyId());

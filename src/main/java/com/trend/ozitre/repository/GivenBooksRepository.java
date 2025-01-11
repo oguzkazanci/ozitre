@@ -10,7 +10,7 @@ public interface GivenBooksRepository extends JpaRepository<GivenBooksEntity, Lo
 
     List<GivenBooksEntity> findByStudentId(Long studentId);
 
-    List<GivenBooksEntity> findByStudentIdAndLessonId(Long studentId, Long lessonId);
+    List<GivenBooksEntity> findByStudentIdAndLessonIdAndGradeId(Long studentId, Long lessonId, Long gradeId);
 
     @Query("SELECT DISTINCT l.lesson, g.lessonId, g.gradeId, gr.grade FROM GivenBooksEntity g " +
             "inner join LessonEntity l on l.lessonId = g.lessonId " +

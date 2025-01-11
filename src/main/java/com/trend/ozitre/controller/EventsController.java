@@ -117,14 +117,15 @@ public class EventsController {
     }
 
     @CrossOrigin
-    @GetMapping("/getByTeacherID/{teacherId}")
-    public ResponseEntity<List<EventsDto>> getEventsByTeacherId(@PathVariable("teacherId") Long teacherId,
+    @GetMapping("/getByTeacherID/{seasonId}/{teacherId}")
+    public ResponseEntity<List<EventWithPaymentDto>> getEventsByTeacherId(@PathVariable("teacherId") Long teacherId,
+                                                                @PathVariable("seasonId") Long seasonId,
                                                                 @RequestParam Integer month,
                                                                 Authentication authentication) throws ParseException {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
         if (userDetails.getAuthorities().stream().anyMatch(authority -> authority.getAuthority().equals("ADMIN"))) {
-            return ResponseEntity.ok(eventsService.getEventsByTeacherId(teacherId, month));
+            return ResponseEntity.ok(eventsService.getEventsByTeacherId(teacherId, seasonId, month));
         } else {
             throw new AccessDeniedException("Yetkiniz yok.");
         }
