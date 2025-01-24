@@ -94,7 +94,8 @@ public class EventsController {
     @GetMapping("/getByStudentID/{seasonId}/{studentId}")
     public ResponseEntity<List<EventWithPaymentDto>> getEventsByStudentId(@PathVariable("studentId") Long studentId,
                                                                           @PathVariable("seasonId") Long seasonId,
-                                                                          @RequestParam Integer month, Authentication authentication) throws ParseException {
+                                                                          @RequestParam Integer month,
+                                                                          Authentication authentication) throws ParseException {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
         if (userDetails.getAuthorities().stream().anyMatch(authority -> authority.getAuthority().equals("ADMIN"))) {

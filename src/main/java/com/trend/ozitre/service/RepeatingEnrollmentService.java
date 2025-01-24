@@ -68,6 +68,7 @@ public class RepeatingEnrollmentService implements Job {
             String lessonName = enrollment.getLesson().getLesson();
             event.setTitle(studentDisplayName + " - " + teacherName + " Hoca ile " + lessonName + " dersi");
             event.setEventStatus(true);
+            event.setPriceToTeacher(false);
             Optional<EventsEntity> optEvent = eventsRepository.findByStudentIdAndDateAndEventStatusAndTitle(event.getStudentId(),
                     event.getDate(), event.getEventStatus(), event.getTitle());
             if (optEvent.isEmpty()) {

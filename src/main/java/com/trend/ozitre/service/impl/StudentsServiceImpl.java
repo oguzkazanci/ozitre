@@ -124,6 +124,7 @@ public class StudentsServiceImpl implements StudentsService {
                     event.setEventStatus(true);
                     event.setDate(Date.from(givenDate.atStartOfDay(ZoneId.systemDefault()).toInstant()));
                     event.setTitle("Paket Dersi Düzenli");
+                    event.setPriceToTeacher(false);
                     BigDecimal price = BigDecimal.valueOf(student.getTotalPrice() / student.getInstallment());
                     Optional<EventsEntity> isEvent = eventsRepository.findByStudentIdAndDateAndEventStatusAndTitle(event.getStudentId(), event.getDate(), event.getEventStatus(), event.getTitle());
                     if (isEvent.isEmpty()) {
