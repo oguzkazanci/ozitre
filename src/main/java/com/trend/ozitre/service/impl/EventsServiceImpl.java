@@ -319,14 +319,18 @@ public class EventsServiceImpl implements EventsService {
         } else {
             ilkGun = LocalDate.of(LocalDate.now().getYear(), month, 1);
         }
-        sonGun = ilkGun.plusDays(ilkGun.getMonth().length(ilkGun.isLeapYear()) - 1);
+
+        sonGun = ilkGun.withDayOfMonth(ilkGun.lengthOfMonth());
 
         List<Date> dates = new ArrayList<>();
         dates.add(Date.from(ilkGun.atStartOfDay(ZoneId.systemDefault()).toInstant()));
-        dates.add(Date.from(sonGun.atStartOfDay(ZoneId.systemDefault()).toInstant()));
+
+        LocalDateTime sonGunSonSaat = sonGun.atTime(23, 59, 59);
+        dates.add(Date.from(sonGunSonSaat.atZone(ZoneId.systemDefault()).toInstant()));
 
         return dates;
     }
+
 
     @Override
     public List<Date> monthToDate(Integer month) {
@@ -334,10 +338,10 @@ public class EventsServiceImpl implements EventsService {
 
         LocalDate sonGun = ilkGun.plusDays(ilkGun.getMonth().length(ilkGun.isLeapYear()) - 1);
 
-        List<Date> tarihler = new ArrayList<>();
-        tarihler.add(Date.from(ilkGun.atStartOfDay(ZoneId.systemDefault()).toInstant()));
-        tarihler.add(Date.from(sonGun.atStartOfDay(ZoneId.systemDefault()).toInstant()));
+        List<Date> dates = new ArrayList<>();
+        dates.add(Date.from(ilkGun.atStartOfDay(ZoneId.systemDefault()).toInstant()));
+        dates.add(Date.from(sonGun.atStartOfDay(ZoneId.systemDefault()).toInstant()));
 
-        return tarihler;
+        return dates;
     }
 }
