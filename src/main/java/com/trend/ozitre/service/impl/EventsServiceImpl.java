@@ -59,11 +59,26 @@ public class EventsServiceImpl implements EventsService {
 
     @Override
     public List<EventsDto> getEventsByDateRange(String startDate, String endDate, Long companyId) throws ParseException {
-        Date date1 = new SimpleDateFormat("dd-MM-yyyy").parse(startDate);
-        Date date2 = new SimpleDateFormat("dd-MM-yyyy").parse(endDate);
+        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
+
+        Date date1 = sdf.parse(startDate);
+        Date date2 = sdf.parse(endDate);
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date2);
+        calendar.set(Calendar.HOUR_OF_DAY, 23);
+        calendar.set(Calendar.MINUTE, 59);
+        calendar.set(Calendar.SECOND, 59);
+        calendar.set(Calendar.MILLISECOND, 999);
+        date2 = calendar.getTime();
+
         List<EventsEntity> events = eventsRepository.findByDateBetweenAndCompanyId(date1, date2, companyId);
-        return events.stream().map(event -> modelMapper.map(event, EventsDto.class)).collect(Collectors.toList());
+
+        return events.stream()
+                .map(event -> modelMapper.map(event, EventsDto.class))
+                .collect(Collectors.toList());
     }
+
 
     @Override
     public EventsDto addEvent(EventsDto eventsDto, String username, Long companyId) {
