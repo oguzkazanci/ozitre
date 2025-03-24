@@ -18,7 +18,7 @@ public interface EventsService {
     List<EventsDto> getEventsByDateRange(String startDate, String endDate, Long companyId) throws ParseException;
 
     EventsDto addEvent(EventsDto eventsDto, String username, Long companyId);
-    // TODO Düzenlenecek
+
     void addEventNew(EventsDto eventsDto, BigDecimal paymentAmount, String username, Long companyId);
 
     void addTeacherPayment(EventsDto eventsDto, TeacherEntity teacher, String username, Long companyId);
