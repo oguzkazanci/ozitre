@@ -14,4 +14,8 @@ public interface EnrollmentRepository extends JpaRepository<EnrollmentEntity, Lo
     List<EnrollmentEntity> getEnrollmentEntitiesByStudent_StudentIdAndStatus(Long studentId, Integer status);
 
     List<EnrollmentEntity> getEnrollmentEntitiesByDays_NameAndFirstDateBeforeAndStatus(String dayName, Date firstDate, Integer status);
+
+    List<EnrollmentEntity> getEnrollmentEntitiesByDays_NameAndFirstDateBetweenAndStatus(
+            String dayName, Date start, Date end, int status
+    );
 }

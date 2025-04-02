@@ -9,6 +9,7 @@ import org.quartz.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 
@@ -42,6 +43,7 @@ public class QuartzConfig {
     }
 
     @Bean
+    @Lazy(false)
     public Scheduler scheduler(AutowiringSpringBeanJobFactory jobFactory) throws Exception {
         SchedulerFactoryBean schedulerFactoryBean = new SchedulerFactoryBean();
         schedulerFactoryBean.setJobFactory(jobFactory);
