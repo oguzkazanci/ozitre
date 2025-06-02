@@ -23,7 +23,7 @@ public class DataSourceConfig {
     public DataSource dataSource() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
         dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
-        dataSource.setUrl("jdbc:mysql://tda.che2ugqiy5fw.us-east-2.rds.amazonaws.com:3306/tda?useSSL=false");
+        dataSource.setUrl("jdbc:mysql://tdadb.che2ugqiy5fw.us-east-2.rds.amazonaws.com:3306/tda?useSSL=false");
         dataSource.setUsername("admin");
         dataSource.setPassword("Devosoft1!");
 
