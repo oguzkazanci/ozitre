@@ -18,7 +18,7 @@ public class DataSourceConfig {
         dataSource.setPassword("trnddrs");
         return dataSource;
     }
-
+*/
     @Bean
     public DataSource dataSource() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
@@ -28,7 +28,7 @@ public class DataSourceConfig {
         dataSource.setPassword("Devosoft1!");
 
         return dataSource;
-    }*/
+    }
 /*
     @Bean
     public DataSource dataSource() {
@@ -39,7 +39,7 @@ public class DataSourceConfig {
         dataSource.setPassword("devo");
 
         return dataSource;
-    } */
+    }
 
     @Bean
     public DataSource dataSource() {
@@ -49,5 +49,5 @@ public class DataSourceConfig {
         dataSource.setUsername("root");
         dataSource.setPassword("devosoft1");
         return dataSource;
-    }
+    }*/
 }
