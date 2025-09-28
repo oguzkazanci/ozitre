@@ -24,6 +24,7 @@ public class StudentsDto {
     private String explanation;
     private Long packageId;
     private Integer totalPrice;
+    private Integer advancePrice;
     private Integer startMonth;
     private Integer installment;
     private Long companyId;

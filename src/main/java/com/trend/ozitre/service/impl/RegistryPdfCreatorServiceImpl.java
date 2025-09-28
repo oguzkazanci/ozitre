@@ -27,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -106,14 +107,17 @@ public class RegistryPdfCreatorServiceImpl implements RegistryPdfCreatorService 
 
     @Override
     public void createEvent(StudentsEntity studentEntity) {
-        float[] fullwidth ={fourCol*4};
+        float[] fullwidth = { fourCol * 4 };
         Table fourColTable = new Table(fourColumnWidth);
-        List<EnrollmentEntity> enrollmentList =enrollmentRepository.getEnrollmentEntitiesByStudent_StudentIdAndStatus(studentEntity.getStudentId(), 0);
-        float totalSum = 0;
 
-        for (EnrollmentEntity enrollment: enrollmentList) {
+        List<EnrollmentEntity> enrollmentList =
+                enrollmentRepository.getEnrollmentEntitiesByStudent_StudentIdAndStatus(studentEntity.getStudentId(), 0);
+
+        BigDecimal totalSum = BigDecimal.ZERO;
+
+        for (EnrollmentEntity enrollment : enrollmentList) {
             StringBuilder days = new StringBuilder();
-            for (DayEntity day: enrollment.getDays()) {
+            for (DayEntity day : enrollment.getDays()) {
                 days.append(" ").append(day.getName());
             }
             fourColTable.addCell(new Cell().add(enrollment.getLesson().getLesson().trim() + " danışmanlığı").setFontSize(8)).setWidth(400);
@@ -121,41 +125,75 @@ public class RegistryPdfCreatorServiceImpl implements RegistryPdfCreatorService 
                     .setTextAlignment(TextAlignment.CENTER).setFontSize(8)).setWidth(520);
             fourColTable.addCell(new Cell().add(String.valueOf(days)).setTextAlignment(TextAlignment.CENTER).setFontSize(8)).setWidth(520);
             fourColTable.addCell(new Cell().add(enrollment.getPrice() + " tl").setTextAlignment(TextAlignment.RIGHT).setFontSize(8)).setWidth(520);
-            totalSum = totalSum + enrollment.getPrice().floatValue();
+
+            if (enrollment.getPrice() != null) {
+                totalSum = totalSum.add(new BigDecimal(enrollment.getPrice().toString()));
+            }
         }
+
         if (studentEntity.getPackageId() != null) {
             PackageEntity packageEntity = packageRepository.getReferenceById(studentEntity.getPackageId());
-            for (int inst = 1; inst <= studentEntity.getInstallment(); inst++) {
-                int currentMonth = (studentEntity.getStartMonth() + inst - 1) % 12;
-                if (currentMonth == 0) {
-                    currentMonth = 12;
-                }
-                String monthName = Month.of(currentMonth).getDisplayName(TextStyle.FULL, new Locale("tr"));
+
+            int installmentCount = studentEntity.getInstallment() == null ? 0 : studentEntity.getInstallment();
+            BigDecimal total = BigDecimal.valueOf(studentEntity.getTotalPrice() == null ? 0 : studentEntity.getTotalPrice());
+            BigDecimal advance = BigDecimal.valueOf(studentEntity.getAdvancePrice() == null ? 0 : studentEntity.getAdvancePrice());
+            if (advance.compareTo(BigDecimal.ZERO) > 0) {
+                String advanceLabel = "Peşinat";
                 fourColTable.addCell(new Cell().add(packageEntity.getPackageName().trim()).setFontSize(8)).setWidth(520);
-                fourColTable.addCell(new Cell().add(monthName).setTextAlignment(TextAlignment.CENTER).setFontSize(8)).setWidth(400);
-                fourColTable.addCell(new Cell().add(inst + "/" + studentEntity.getInstallment()).setTextAlignment(TextAlignment.RIGHT).setFontSize(8)).setWidth(520);
-                fourColTable.addCell(new Cell().add(studentEntity.getTotalPrice() / studentEntity.getInstallment() + " tl").setTextAlignment(TextAlignment.RIGHT).setFontSize(8)).setWidth(520);
+                fourColTable.addCell(new Cell().add(advanceLabel).setTextAlignment(TextAlignment.CENTER).setFontSize(8)).setWidth(400);
+                fourColTable.addCell(new Cell().add("-").setTextAlignment(TextAlignment.RIGHT).setFontSize(8)).setWidth(520);
+                fourColTable.addCell(new Cell().add(advance.toPlainString() + " tl").setTextAlignment(TextAlignment.RIGHT).setFontSize(8)).setWidth(520);
+                totalSum = totalSum.add(advance);
             }
-            totalSum = totalSum + studentEntity.getTotalPrice();
+
+            BigDecimal remaining = total.subtract(advance);
+            if (remaining.compareTo(BigDecimal.ZERO) > 0 && installmentCount > 0) {
+                BigDecimal[] divRem = remaining.divideAndRemainder(BigDecimal.valueOf(installmentCount));
+                BigDecimal base = divRem[0];
+                BigDecimal remainder = divRem[1];
+
+                int startMonth = studentEntity.getStartMonth() == null ? LocalDate.now().getMonthValue() : studentEntity.getStartMonth();
+                for (int inst = 1; inst <= installmentCount; inst++) {
+                    int currentMonth = (startMonth + inst - 1) % 12;
+                    if (currentMonth == 0) currentMonth = 12;
+
+                    String monthName = Month.of(currentMonth).getDisplayName(TextStyle.FULL, new Locale("tr"));
+
+                    BigDecimal amount = base;
+                    if (remainder.compareTo(BigDecimal.ZERO) > 0) {
+                        amount = amount.add(BigDecimal.ONE);
+                        remainder = remainder.subtract(BigDecimal.ONE);
+                    }
+
+                    fourColTable.addCell(new Cell().add(packageEntity.getPackageName().trim()).setFontSize(8)).setWidth(520);
+                    fourColTable.addCell(new Cell().add(monthName).setTextAlignment(TextAlignment.CENTER).setFontSize(8)).setWidth(400);
+                    fourColTable.addCell(new Cell().add(inst + "/" + installmentCount).setTextAlignment(TextAlignment.RIGHT).setFontSize(8)).setWidth(520);
+                    fourColTable.addCell(new Cell().add(amount.toPlainString() + " tl").setTextAlignment(TextAlignment.RIGHT).setFontSize(8)).setWidth(520);
+
+                    totalSum = totalSum.add(amount);
+                }
+            }
         }
 
         document.add(fourColTable.setMarginBottom(20f));
-        float[] oneTwo ={threeCol + 125f, threeCol * 2};
+
+        float[] oneTwo = { threeCol + 125f, threeCol * 2 };
         Table threeColTable4 = new Table(oneTwo);
         threeColTable4.addCell(new Cell().add("").setBorder(Border.NO_BORDER));
         threeColTable4.addCell(new Cell().add(fullwidthDashedBorder(fullwidth)).setBorder(Border.NO_BORDER));
         document.add(threeColTable4);
 
-        Table threeColTable3=new Table(threeColumnWidth);
+        Table threeColTable3 = new Table(threeColumnWidth);
         threeColTable3.addCell(new Cell().add("").setBorder(Border.NO_BORDER)).setMarginLeft(10f);
         threeColTable3.addCell(new Cell().add("Toplam Tutar").setTextAlignment(TextAlignment.CENTER).setBorder(Border.NO_BORDER));
-        threeColTable3.addCell(new Cell().add(String.valueOf(totalSum) + " tl").setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER)).setMarginRight(15f);
+        threeColTable3.addCell(new Cell().add(totalSum.toPlainString() + " tl").setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER)).setMarginRight(15f);
 
         document.add(threeColTable3);
         document.add(fullwidthDashedBorder(fullwidth));
         document.add(new Paragraph("\n"));
-        document.add(getDividerTable(fullwidth).setBorder(new SolidBorder(Color.GRAY,1)).setMarginBottom(15f));
+        document.add(getDividerTable(fullwidth).setBorder(new SolidBorder(Color.GRAY, 1)).setMarginBottom(15f));
     }
+
 
     @Override
     public void createTableHeader(ProductTableHeader productTableHeader) {

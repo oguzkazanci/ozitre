@@ -39,12 +39,12 @@ public class RepeatingPackageService implements Job {
     @Override
     public void execute(JobExecutionContext jobExecutionContext) {
         System.out.println("Paket Ders İçin Tekrarlı İşlem Başlatıldı!!!");
-        List<StudentsEntity> studentsEntities = studentsRepository.findByPackageIdIsNotNull();
+        //List<StudentsEntity> studentsEntities = studentsRepository.findByPackageIdIsNotNull();
         List<TeacherEntity> teacherEntities = teachersRepository.findByTeacherBaseFeeIsNotNull();
-        System.out.println("recurringPackage student size : " + studentsEntities.size());
+        //System.out.println("recurringPackage student size : " + studentsEntities.size());
         System.out.println("recurringPackage teacher size : " + teacherEntities.size());
 
-        for (StudentsEntity student: studentsEntities) {
+        /*for (StudentsEntity student: studentsEntities) {
             int month = student.getStartMonth();
             LocalDate localDate = student.getCreatedDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
             LocalDate givenDate = LocalDate.of(localDate.getYear(), month, 1);
@@ -64,7 +64,7 @@ public class RepeatingPackageService implements Job {
                     eventsService.addEventNew(event, price, student.getCreatedBy(), student.getCompanyId());
                 }
             }
-        }
+        }*/
 
         for (TeacherEntity teacher: teacherEntities) {
             LocalDate currentDate = LocalDate.now();

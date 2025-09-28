@@ -53,8 +53,6 @@ public class StudentsServiceImpl implements StudentsService {
 
     private final CompanyRepository companyRepository;
 
-    private final EventsRepository eventsRepository;
-
     private final EventsService eventsService;
 
     private final ModelMapper modelMapper;
@@ -111,26 +109,10 @@ public class StudentsServiceImpl implements StudentsService {
             student.setCreatedBy(username);
             saveUser(student);
             student = studentsRepository.save(student);
-            if (studentsDto.getPackageId() != null) {
-                int month = student.getStartMonth();
-                LocalDate localDate = student.getCreatedDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-                int year = localDate.getYear();
-                LocalDate givenDate = LocalDate.of(year, month, 1);
-                LocalDate currentDate = LocalDate.now();
-
-                if (currentDate.isAfter(givenDate)) {
-                    EventsDto event = new EventsDto();
-                    event.setStudentId(student.getStudentId());
-                    event.setEventStatus(true);
-                    event.setDate(Date.from(givenDate.atStartOfDay(ZoneId.systemDefault()).toInstant()));
-                    event.setTitle("Paket Dersi Düzenli");
-                    event.setPriceToTeacher(false);
-                    BigDecimal price = BigDecimal.valueOf(student.getTotalPrice() / student.getInstallment());
-                    Optional<EventsEntity> isEvent = eventsRepository.findByStudentIdAndDateAndEventStatusAndTitle(event.getStudentId(), event.getDate(), event.getEventStatus(), event.getTitle());
-                    if (isEvent.isEmpty()) {
-                        eventsService.addEventNew(event, price, student.getCreatedBy(), student.getCompanyId());
-                    }
-                }
+            if (student.getPackageId() != null
+                    && student.getInstallment() != null
+                    && student.getInstallment() > 0) {
+                eventsService.scheduleInstallmentsForStudent(student, username);
             }
         }
         return modelMapper.map(student, StudentsDto.class);

@@ -15,6 +15,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.text.ParseException;
@@ -22,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -358,5 +360,101 @@ public class EventsServiceImpl implements EventsService {
         dates.add(Date.from(sonGun.atStartOfDay(ZoneId.systemDefault()).toInstant()));
 
         return dates;
+    }
+
+    @Transactional
+    @Override
+    public void scheduleInstallmentsForStudent(StudentsEntity student, String username) {
+        if (student.getPackageId() == null || student.getInstallment() == null || student.getInstallment() <= 0) {
+            return;
+        }
+
+        final int installmentCount = student.getInstallment();
+
+        BigDecimal total = BigDecimal.valueOf(
+                Optional.ofNullable(student.getTotalPrice()).orElse(0)
+        );
+
+        BigDecimal advance = BigDecimal.valueOf(
+                Optional.ofNullable(student.getAdvancePrice()).orElse(0)
+        );
+
+        if (advance.compareTo(BigDecimal.ZERO) > 0) {
+            createAdvanceEventIfNotExists(student, advance, username);
+        }
+
+        BigDecimal remaining = total.subtract(advance);
+        if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        BigDecimal[] divRem = remaining.divideAndRemainder(BigDecimal.valueOf(installmentCount));
+        BigDecimal base = divRem[0];
+        BigDecimal remainder = divRem[1];
+
+        LocalDate created = student.getCreatedDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        int startYear = created.getYear();
+        int startMonth = student.getStartMonth();
+
+        LocalDate startDate = LocalDate.of(startYear, startMonth, 1)
+                .with(java.time.temporal.TemporalAdjusters.firstDayOfMonth());
+
+        for (int i = 0; i < installmentCount; i++) {
+            LocalDate due = startDate.plusMonths(i);
+
+            Date dueDateAt09 = Date.from(
+                    due.atTime(9, 0, 0).atZone(ZoneId.systemDefault()).toInstant()
+            );
+
+            String title = "Paket Dersi Düzenli - Taksit " + (i + 1);
+
+            Optional<EventsEntity> exists = eventsRepository
+                    .findByStudentIdAndDateAndEventStatusAndTitle(student.getStudentId(), dueDateAt09, true, title);
+            if (exists.isPresent()) {
+                continue;
+            }
+
+            BigDecimal amount = base;
+            if (remainder.compareTo(BigDecimal.ZERO) > 0) {
+                amount = amount.add(BigDecimal.ONE);
+                remainder = remainder.subtract(BigDecimal.ONE);
+            }
+
+            EventsDto dto = new EventsDto();
+            dto.setTitle(title);
+            dto.setDate(dueDateAt09);
+            dto.setStudentId(student.getStudentId());
+            dto.setEventStatus(true);
+            dto.setPriceToTeacher(false);
+
+            // Event + Payment (öğrenci) tek seferde
+            addEventNew(dto, amount, username, student.getCompanyId());
+        }
+    }
+
+    /**
+     * Peşinat için tek seferlik event + payment oluşturur.
+     * Aynı gün/saat/başlıkla varsa yeniden oluşturmaz.
+     */
+    private void createAdvanceEventIfNotExists(StudentsEntity student, BigDecimal advanceAmount, String username) {
+        LocalDate createdLocal = student.getCreatedDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        Date advanceDateAt09 = Date.from(createdLocal.atTime(9, 0, 0).atZone(ZoneId.systemDefault()).toInstant());
+
+        String title = "Peşinat";
+        Optional<EventsEntity> exists = eventsRepository
+                .findByStudentIdAndDateAndEventStatusAndTitle(student.getStudentId(), advanceDateAt09, true, title);
+
+        if (exists.isPresent()) {
+            return;
+        }
+
+        EventsDto advanceEvent = new EventsDto();
+        advanceEvent.setTitle(title);
+        advanceEvent.setDate(advanceDateAt09);
+        advanceEvent.setStudentId(student.getStudentId());
+        advanceEvent.setEventStatus(true);
+        advanceEvent.setPriceToTeacher(false);
+
+        addEventNew(advanceEvent, advanceAmount, username, student.getCompanyId());
     }
 }

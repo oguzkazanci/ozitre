@@ -5,22 +5,20 @@ import com.trend.ozitre.entity.EnrollmentEntity;
 import com.trend.ozitre.entity.EventsEntity;
 import com.trend.ozitre.repository.EnrollmentRepository;
 import com.trend.ozitre.repository.EventsRepository;
+import com.trend.ozitre.repository.SeasonsRepository;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -33,56 +31,75 @@ public class RepeatingEnrollmentService implements Job {
     private EventsRepository eventsRepository;
 
     @Autowired
-    private EventsService eventsService;
+    private SeasonsRepository seasonsRepository;
 
     @Autowired
-    private ModelMapper modelMapper;
+    private EventsService eventsService;
 
     @Override
-    public void execute(JobExecutionContext jobExecutionContext) {
+    @Transactional
+    public void execute(JobExecutionContext ctx) {
         System.out.println("Özel Ders İçin Tekrarlı İşlem Başlatıldı!!!");
-        List<EnrollmentEntity> recurringEnrollments = getRecurringEnrollmentsToProcess();
-        System.out.println("recurringEnrollments size : " + recurringEnrollments.size());
+
+        Date now = new Date();
+        var currentSeasonOpt = seasonsRepository.findSeasonByDate(now);
+        if (currentSeasonOpt.isEmpty()) {
+            System.out.println("Uyarı: Bugüne karşılık gelen bir sezon bulunamadı. İşlem yapılmadı.");
+            return;
+        }
+        var currentSeason = currentSeasonOpt.get();
+
+        List<EnrollmentEntity> recurring = getRecurringEnrollmentsToProcess();
+        System.out.println("recurringEnrollments size : " + recurring.size());
+
         LocalDate today = LocalDate.now();
         LocalDateTime todayDT = today.atTime(LocalTime.of(10, 0));
 
+        List<Long> toCancelIds = new ArrayList<>();
+        for (EnrollmentEntity enrollment : recurring) {
+            Date created = enrollment.getCreatedDate();
+            boolean createdInSeason =
+                    !created.before(currentSeason.getStartDate()) &&
+                            !created.after(currentSeason.getEndDate());
 
-        for (EnrollmentEntity enrollment : recurringEnrollments) {
-            /*Optional<EventsEntity> event = eventsRepository.findById(lesson.getEventId());
-            NotificationEntity notification = new NotificationEntity();
-            notification.setScheduledId(lesson.getScheduledId());
-            notification.setType(0L);
-            notification.setUsername(event.get().getCreatedBy());
-            notification.setDate(new Date());
-            notification.setState(0L);
-            notification.setDescription(lesson.getScheduledName());
+            if (!createdInSeason) {
+                toCancelIds.add(enrollment.getEnrollmentId());
+                continue;
+            }
 
-            notificationRepository.save(notification);*/
             EventsDto event = new EventsDto();
             event.setDate(Date.from(todayDT.atZone(ZoneId.systemDefault()).toInstant()));
             event.setLessonId(enrollment.getLesson().getLessonId());
             event.setTeacherId(enrollment.getTeacher().getTeacherId());
             event.setStudentId(enrollment.getStudent().getStudentId());
+
             String studentDisplayName = enrollment.getStudent().getName() + " " + enrollment.getStudent().getSurname();
             String teacherName = enrollment.getTeacher().getTeacherName();
             String lessonName = enrollment.getLesson().getLesson();
             event.setTitle(studentDisplayName + " - " + teacherName + " Hoca ile " + lessonName + " dersi");
             event.setEventStatus(true);
             event.setPriceToTeacher(false);
-            Optional<EventsEntity> optEvent = eventsRepository.findByStudentIdAndDateAndEventStatusAndTitle(event.getStudentId(),
-                    event.getDate(), event.getEventStatus(), event.getTitle());
+
+            Optional<EventsEntity> optEvent =
+                    eventsRepository.findByStudentIdAndDateAndEventStatusAndTitle(
+                            event.getStudentId(), event.getDate(), event.getEventStatus(), event.getTitle());
+
             if (optEvent.isEmpty()) {
                 eventsService.addEventNew(event, enrollment.getPrice(), enrollment.getCreatedBy(), enrollment.getCompanyId());
             }
+        }
+
+        if (!toCancelIds.isEmpty()) {
+            int updated = enrollmentRepository.cancelEnrollments(toCancelIds);
+            System.out.println("Sezon dışı olduğu için iptal edilen enrollment sayısı: " + updated);
         }
     }
 
     public List<EnrollmentEntity> getRecurringEnrollmentsToProcess() {
         Date today = new Date();
-
-        LocalDate tdLd = LocalDate.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEEE", Locale.forLanguageTag("tr"));
-        String todayName = tdLd.format(formatter);
+        LocalDate ld = LocalDate.now();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("EEEE", Locale.forLanguageTag("tr"));
+        String todayName = ld.format(fmt);
 
         return enrollmentRepository.getEnrollmentEntitiesByDays_NameAndFirstDateBeforeAndStatus(todayName, today, 0);
     }

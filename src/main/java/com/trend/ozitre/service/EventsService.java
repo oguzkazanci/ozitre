@@ -2,6 +2,7 @@ package com.trend.ozitre.service;
 
 import com.trend.ozitre.dto.EventWithPaymentDto;
 import com.trend.ozitre.dto.EventsDto;
+import com.trend.ozitre.entity.StudentsEntity;
 import com.trend.ozitre.entity.TeacherEntity;
 
 import java.math.BigDecimal;
@@ -40,4 +41,6 @@ public interface EventsService {
     List<Date> monthToDate(Integer month, Long seasonId);
 
     List<Date> monthToDate(Integer month);
+
+    void scheduleInstallmentsForStudent(StudentsEntity student, String username);
 }

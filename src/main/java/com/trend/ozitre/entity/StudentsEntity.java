@@ -67,6 +67,9 @@ public class StudentsEntity extends BaseEntity {
     @Column(name = "total_price", length = 12)
     private Integer totalPrice;
 
+    @Column(name = "advance_price", length = 12)
+    private Integer advancePrice;
+
     @Column(name = "start_month", length = 12)
     private Integer startMonth;
 
