@@ -10,7 +10,10 @@ import com.trend.ozitre.service.EventsService;
 import com.trend.ozitre.service.PaymentService;
 import com.trend.ozitre.service.StudentsService;
 import com.trend.ozitre.service.TeachersService;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -110,7 +113,7 @@ public class EventsServiceImpl implements EventsService {
         return modelMapper.map(event, EventsDto.class);
     }
 
-   // TODO düzenlenecek
+    // TODO düzenlenecek
     @Override
     public void addEventNew(EventsDto eventsDto, BigDecimal paymentAmount, String username, Long companyId) {
         EventsEntity event = modelMapper.map(eventsDto, EventsEntity.class);
@@ -245,7 +248,7 @@ public class EventsServiceImpl implements EventsService {
         checkEventStatus(eventStatus, paymentDto, username, event.getCompanyId());
     }
 
-// TODO düzenlenecek
+    // TODO düzenlenecek
     private void addStudentPaymentNew(Long eventId, Boolean eventStatus, String username, Long companyId, BigDecimal paymentAmount) {
         PaymentDto paymentDto = new PaymentDto();
         paymentDto.setEventId(eventId);
@@ -285,7 +288,7 @@ public class EventsServiceImpl implements EventsService {
     }
 
     private void checkEventStatus(Boolean eventStatus, PaymentDto paymentDto, String username, Long companyId) {
-        if (eventStatus){
+        if (eventStatus) {
             paymentDto.setPaymentStatus(0);
         } else {
             paymentDto.setPaymentStatus(2);
@@ -299,7 +302,7 @@ public class EventsServiceImpl implements EventsService {
 
     private void updatePayment(Long eventId, Integer paymentType, Boolean eventStatus, String username, Boolean priceToTeacher) {
         PaymentEntity payment = paymentRepository.findByEventIdAndPaymentType(eventId, paymentType);
-        if (eventStatus){
+        if (eventStatus) {
             payment.setPaymentStatus(0);
         } else {
             payment.setPaymentStatus(2);
@@ -456,5 +459,155 @@ public class EventsServiceImpl implements EventsService {
         advanceEvent.setPriceToTeacher(false);
 
         addEventNew(advanceEvent, advanceAmount, username, student.getCompanyId());
+    }
+
+    private List<PlanItem> buildPlannedSchedule(StudentsEntity s) {
+        List<PlanItem> plan = new ArrayList<>();
+        if (s.getPackageId() == null || s.getInstallment() == null || s.getInstallment() <= 0) return plan;
+
+        int installmentCount = s.getInstallment();
+        BigDecimal total = BigDecimal.valueOf(Optional.ofNullable(s.getTotalPrice()).orElse(0));
+        BigDecimal advance = BigDecimal.valueOf(Optional.ofNullable(s.getAdvancePrice()).orElse(0));
+
+        if (advance.compareTo(BigDecimal.ZERO) > 0) {
+            LocalDate created = s.getCreatedDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            Date at09 = Date.from(created.atTime(9, 0).atZone(ZoneId.systemDefault()).toInstant());
+            plan.add(new PlanItem("Peşinat", at09, advance));
+        }
+
+        BigDecimal remaining = total.subtract(advance);
+        if (remaining.compareTo(BigDecimal.ZERO) <= 0) return plan;
+
+        BigDecimal[] divRem = remaining.divideAndRemainder(BigDecimal.valueOf(installmentCount));
+        BigDecimal base = divRem[0];
+        BigDecimal remainder = divRem[1];
+
+        LocalDate created = s.getCreatedDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        int startYear = created.getYear();
+        int startMonth = Optional.ofNullable(s.getStartMonth()).orElse(LocalDate.now().getMonthValue());
+        LocalDate startDate = LocalDate.of(startYear, startMonth, 1);
+
+        for (int i = 0; i < installmentCount; i++) {
+            LocalDate due = startDate.plusMonths(i);
+            Date at09 = Date.from(due.atTime(9, 0).atZone(ZoneId.systemDefault()).toInstant());
+
+            BigDecimal amt = base;
+            if (remainder.compareTo(BigDecimal.ZERO) > 0) {
+                amt = amt.add(BigDecimal.ONE);
+                remainder = remainder.subtract(BigDecimal.ONE);
+            }
+
+            String title = "Paket Dersi Düzenli - Taksit " + (i + 1);
+            plan.add(new PlanItem(title, at09, amt));
+        }
+
+        return plan;
+    }
+
+    @Override
+    @Transactional
+    public void reconcilePaymentsForStudent(StudentsEntity student, String username) {
+        List<PlanItem> plan = buildPlannedSchedule(student);
+
+        // 1) Mevcut öğrenci events/payments çek
+        // Tercih A: özel bir repository metodu varsa (önerilir)
+        List<EventsEntity> existingEvents = eventsRepository
+                .findByStudentIdAndEventStatusAndPriceToTeacher(student.getStudentId(), true, false);
+
+        // Tercih B: daha geniş al, sonradan filtrele
+        //List<EventsEntity> existingEvents = eventsRepository.findByStudentId(student.getStudentId());
+
+        Set<String> validTitles = new HashSet<>();
+        validTitles.add("Peşinat");
+
+        Map<String, EventsEntity> byTitle = new HashMap<>();
+        for (EventsEntity ev : existingEvents) {
+            if (Boolean.TRUE.equals(ev.getPriceToTeacher())) continue;
+            String t = ev.getTitle() == null ? "" : ev.getTitle().trim();
+            if ("Peşinat".equals(t) || t.startsWith("Paket Dersi Düzenli - Taksit ")) {
+                byTitle.put(t, ev);
+            }
+        }
+
+        Set<String> touched = new HashSet<>();
+
+        for (PlanItem item : plan) {
+            String title = item.getTitle();
+            EventsEntity ev = byTitle.get(title);
+
+            if (ev == null) {
+                EventsDto dto = new EventsDto();
+                dto.setTitle(title);
+                dto.setDate(item.getDate());
+                dto.setStudentId(student.getStudentId());
+                dto.setEventStatus(true);
+                dto.setPriceToTeacher(false);
+                addEventNew(dto, item.getAmount(), username, student.getCompanyId());
+            } else {
+                boolean changed = false;
+
+                if (!Objects.equals(trimToDay(ev.getDate()), trimToDay(item.getDate()))) {
+                    ev.setDate(item.getDate());
+                    changed = true;
+                }
+                PaymentEntity p = paymentRepository.findByEventIdAndPaymentType(ev.getEventId(), 0);
+                if (p != null) {
+                    long newAmount = item.getAmount().longValue();
+                    if (!Objects.equals(p.getPaymentAmount(), newAmount)) {
+                        p.setPaymentAmount(newAmount);
+                        long received = Optional.ofNullable(p.getAmountReceived()).orElse(0L);
+                        long newRemaining = Math.max(newAmount - received, 0L);
+                        p.setRemainingAmount(newRemaining);
+                        p.setUpdatedBy(username);
+                        p.setUpdatedDate(new Date());
+                        paymentRepository.save(p);
+                    }
+                }
+
+                if (changed) {
+                    ev.setUpdatedBy(username);
+                    ev.setUpdatedDate(new Date());
+                    eventsRepository.save(ev);
+                }
+            }
+            touched.add(title);
+        }
+
+        for (Map.Entry<String, EventsEntity> e : byTitle.entrySet()) {
+            String title = e.getKey();
+            if (touched.contains(title)) continue;
+
+            EventsEntity ev = e.getValue();
+            PaymentEntity p = paymentRepository.findByEventIdAndPaymentType(ev.getEventId(), 0);
+            long received = p == null ? 0L : Optional.ofNullable(p.getAmountReceived()).orElse(0L);
+
+            if (received == 0L) {
+                if (p != null) {
+                    p.setPaymentStatus(2);
+                    p.setUpdatedBy(username);
+                    p.setUpdatedDate(new Date());
+                    paymentRepository.save(p);
+                }
+                ev.setEventStatus(false);
+                ev.setUpdatedBy(username);
+                ev.setUpdatedDate(new Date());
+                eventsRepository.save(ev);
+            }
+        }
+    }
+
+    private Date trimToDay(Date d) {
+        if (d == null) return null;
+        LocalDate ld = d.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        return Date.from(ld.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    private static class PlanItem {
+        private String title;   // "Peşinat" veya "Paket Dersi Düzenli - Taksit i"
+        private Date date;      // due 09:00
+        private BigDecimal amount;
     }
 }

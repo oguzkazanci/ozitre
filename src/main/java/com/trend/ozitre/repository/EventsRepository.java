@@ -22,4 +22,5 @@ public interface EventsRepository extends JpaRepository<EventsEntity,Long> {
     Optional<EventsEntity> findByStudentIdAndDateAndEventStatusAndTitle(Long studentId, Date date, Boolean eventStatus, String title);
 
     Optional<EventsEntity> findByTeacherIdAndDateAndEventStatusAndTitle(Long teacherId, Date date, Boolean eventStatus, String title);
+    List<EventsEntity> findByStudentIdAndEventStatusAndPriceToTeacher(Long teacher, Boolean eventStatus, Boolean priceToTeacher);
 }

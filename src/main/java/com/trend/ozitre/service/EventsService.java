@@ -43,4 +43,6 @@ public interface EventsService {
     List<Date> monthToDate(Integer month);
 
     void scheduleInstallmentsForStudent(StudentsEntity student, String username);
+
+    public void reconcilePaymentsForStudent(StudentsEntity student, String username);
 }

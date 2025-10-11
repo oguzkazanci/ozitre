@@ -87,8 +87,11 @@ public class StudentsServiceImpl implements StudentsService {
 
     @Override
     public StudentsDto saveStudent(StudentsDto studentsDto, String username, Long companyId) {
-        Optional<StudentsEntity> students = Optional.empty();
-        if (studentsDto.getStudentId() != null) students = studentsRepository.findById(studentsDto.getStudentId());
+        Optional<StudentsEntity> prevOpt = Optional.empty();
+        if (studentsDto.getStudentId() != null) {
+            prevOpt = studentsRepository.findById(studentsDto.getStudentId());
+        }
+
         studentsDto.setUsername(formatForUsername(studentsDto.getName()) + "." + formatForUsername(studentsDto.getSurname()));
         studentsDto.setName(StringUtils.capitalize(studentsDto.getName()));
         studentsDto.setSurname(StringUtils.capitalize(studentsDto.getSurname()));
@@ -98,21 +101,29 @@ public class StudentsServiceImpl implements StudentsService {
         StudentsEntity student = modelMapper.map(studentsDto, StudentsEntity.class);
         student.setCompanyId(companyId);
 
-        if (students.isPresent()) {
-            student.setCreatedBy(students.get().getCreatedBy());
-            student.setCreatedDate(students.get().getCreatedDate());
+        if (prevOpt.isPresent()) {
+            StudentsEntity prev = prevOpt.get();
+            student.setCreatedBy(prev.getCreatedBy());
+            student.setCreatedDate(prev.getCreatedDate());
             student.setUpdatedDate(new Date());
             student.setUpdatedBy(username);
             student = studentsRepository.save(student);
+
+            if (student.getPackageId() != null && student.getInstallment() != null && student.getInstallment() > 0) {
+                eventsService.reconcilePaymentsForStudent(student, username);
+            }
+
         } else {
             student.setCreatedDate(new Date());
             student.setCreatedBy(username);
             saveUser(student);
             student = studentsRepository.save(student);
-            if (student.getPackageId() != null
-                    && student.getInstallment() != null
-                    && student.getInstallment() > 0) {
-                eventsService.scheduleInstallmentsForStudent(student, username);
+
+            // İlk oluşturma: isterseniz reconcile da kullanabilirsiniz.
+            if (student.getPackageId() != null && student.getInstallment() != null && student.getInstallment() > 0) {
+                eventsService.reconcilePaymentsForStudent(student, username);
+                // veya mevcut fonksiyonuz:
+                // eventsService.scheduleInstallmentsForStudent(student, username);
             }
         }
         return modelMapper.map(student, StudentsDto.class);
