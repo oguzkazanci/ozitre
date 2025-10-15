@@ -10,11 +10,14 @@ import com.trend.ozitre.dto.StudentsDto;
 import com.trend.ozitre.dto.request.ExpenseRequest;
 import com.trend.ozitre.entity.EventsEntity;
 import com.trend.ozitre.entity.PaymentEntity;
+import com.trend.ozitre.entity.StudentsEntity;
 import com.trend.ozitre.model.HeaderDetails;
 import com.trend.ozitre.model.PackageTableHeader;
 import com.trend.ozitre.model.ProductTableHeader;
+import com.trend.ozitre.repository.CompanyRepository;
 import com.trend.ozitre.repository.EventsRepository;
 import com.trend.ozitre.repository.PaymentRepository;
+import com.trend.ozitre.repository.StudentsRepository;
 import com.trend.ozitre.service.CsvExcelCreatorService;
 import com.trend.ozitre.service.EventsService;
 import com.trend.ozitre.service.PaymentPdfCreatorService;
@@ -35,6 +38,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.text.ParseException;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -46,6 +50,10 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
 
     private final EventsRepository eventsRepository;
+
+    private final CompanyRepository companyRepository;
+
+    private final StudentsRepository studentsRepository;
 
     @Autowired
     @Lazy
@@ -120,72 +128,65 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public byte[] getPaymentPdf(Long studentId, Integer month, Long seasonId) throws IOException, ParseException, URISyntaxException {
         URL res = getClass().getResource("/trendders-logo-xl.png");
-        assert res != null;
-
         String imagePath;
-        try (InputStream inputStream = res.openStream()) {
-            File file = File.createTempFile("trendders-logo", ".png");
-            file.deleteOnExit();
-            Files.copy(inputStream, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            imagePath = file.getAbsolutePath();
+        try (InputStream in = res.openStream()) {
+            File f = File.createTempFile("trendders-logo", ".png");
+            f.deleteOnExit();
+            Files.copy(in, f.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            imagePath = f.getAbsolutePath();
         }
 
         paymentPdfCreatorService.createDocument();
 
-        // Create Header start
         HeaderDetails header = new HeaderDetails();
-
-        // Image nesnesini oluştur
         Image companyLogo = new Image(ImageDataFactory.create(new File(imagePath).toURL()));
-
         companyLogo.scale(0.4F, 0.4F);
         header.setImageBanner(companyLogo);
         header.setInvoiceDate(LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")));
         paymentPdfCreatorService.createHeader(header);
-        //Header End
 
-        //Create Address start
         paymentPdfCreatorService.createAddress(studentId);
-        //Address end
 
-        List<EventWithPaymentDto> eventsWithPayments = eventsService.getEventsByStudentId(studentId, seasonId, month);
+        List<EventWithPaymentDto> allMonthsList = new ArrayList<>();
+        for (int m = 0; m < 12; m++) {
+            allMonthsList.addAll(eventsService.getEventsByStudentId(studentId, seasonId, m));
+        }
 
-        List<EventsDto> enrollmentEvents = new ArrayList<>();
-        List<EventsDto> packageEvents = new ArrayList<>();
-        for (EventWithPaymentDto eventWithPaymentDto: eventsWithPayments) {
-            EventsDto event = eventWithPaymentDto.getEvent();
-            if (event.getLessonId() != null && event.getTeacherId() != null) {
-                enrollmentEvents.add(event);
-            } else {
-                packageEvents.add(event);
+        StudentsEntity stu = studentsRepository.getReferenceById(studentId);
+
+        List<PaymentDto> allPackagePayments = new ArrayList<>();
+        LocalDate start = LocalDate.of(LocalDate.now().getYear(), 1, 1);
+        LocalDate end   = LocalDate.of(LocalDate.now().getYear(), 12, 31);
+        List<EventsEntity> seasonEvents = eventsRepository.findByDateBetweenAndStudentIdAndEventStatus(
+                Date.from(start.atStartOfDay(ZoneId.systemDefault()).toInstant()),
+                Date.from(end.atTime(23,59,59).atZone(ZoneId.systemDefault()).toInstant()),
+                studentId, true);
+
+        for (EventsEntity ev : seasonEvents) {
+            if (ev.getTeacherId() == null || ev.getLessonId() == null) {
+                PaymentEntity p = paymentRepository.findByEventIdAndPaymentType(ev.getEventId(), 0);
+                if (p != null) {
+                    PaymentDto pd = new PaymentDto();
+                    pd.setEventId(p.getEventId());
+                    pd.setPaymentAmount(p.getPaymentAmount());
+                    pd.setAmountReceived(p.getAmountReceived());
+                    pd.setRemainingAmount(p.getRemainingAmount());
+                    pd.setPaymentStatus(p.getPaymentStatus());
+                    allPackagePayments.add(pd);
+                }
             }
         }
-        if (!enrollmentEvents.isEmpty()) {
-            ProductTableHeader productTableHeader = new ProductTableHeader();
-            paymentPdfCreatorService.createTableHeader(productTableHeader);
 
-            paymentPdfCreatorService.createEvent(eventsWithPayments);
-        }
-        if (!packageEvents.isEmpty()) {
-            PackageTableHeader packageTableHeader = new PackageTableHeader();
-            paymentPdfCreatorService.createTableHeader(packageTableHeader);
+        paymentPdfCreatorService.createEvent(allMonthsList, stu, allPackagePayments);
 
-            paymentPdfCreatorService.createEvent(eventsWithPayments);
-        }
-
-        //Term and Condition Start
-        List<String> TncList = new ArrayList<>();
-        TncList.add("****** Mali Değeri Yoktur ******");
-        //TncList.add("2. The Seller warrants the product for one (1) year from the date of shipment");
+        List<String> TncList = List.of("****** Mali Değeri Yoktur ******");
         paymentPdfCreatorService.createTnc(TncList, false, imagePath);
 
-        // Term and condition end
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
         Path source = Paths.get("yeniPdfName.pdf");
-        Files.copy(source, outputStream);
+        Files.copy(source, out);
         Files.delete(source);
-
-        return outputStream.toByteArray();
+        return out.toByteArray();
     }
 
     @Override

@@ -441,15 +441,16 @@ public class EventsServiceImpl implements EventsService {
      */
     private void createAdvanceEventIfNotExists(StudentsEntity student, BigDecimal advanceAmount, String username) {
         LocalDate createdLocal = student.getCreatedDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-        Date advanceDateAt09 = Date.from(createdLocal.atTime(9, 0, 0).atZone(ZoneId.systemDefault()).toInstant());
+        int startYear = createdLocal.getYear();
+        int startMonth = Optional.ofNullable(student.getStartMonth()).orElse(LocalDate.now().getMonthValue());
+        LocalDate firstDue = LocalDate.of(startYear, startMonth, 1);
+        Date advanceDateAt09 = Date.from(firstDue.atTime(9, 0).atZone(ZoneId.systemDefault()).toInstant());
 
         String title = "Peşinat";
         Optional<EventsEntity> exists = eventsRepository
                 .findByStudentIdAndDateAndEventStatusAndTitle(student.getStudentId(), advanceDateAt09, true, title);
 
-        if (exists.isPresent()) {
-            return;
-        }
+        if (exists.isPresent()) return;
 
         EventsDto advanceEvent = new EventsDto();
         advanceEvent.setTitle(title);
@@ -461,44 +462,43 @@ public class EventsServiceImpl implements EventsService {
         addEventNew(advanceEvent, advanceAmount, username, student.getCompanyId());
     }
 
-    private List<PlanItem> buildPlannedSchedule(StudentsEntity s) {
+    private List<PlanItem> buildPlannedSchedule(StudentsEntity s, boolean advanceDateNow) {
         List<PlanItem> plan = new ArrayList<>();
         if (s.getPackageId() == null || s.getInstallment() == null || s.getInstallment() <= 0) return plan;
 
         int installmentCount = s.getInstallment();
-        BigDecimal total = BigDecimal.valueOf(Optional.ofNullable(s.getTotalPrice()).orElse(0));
+        BigDecimal total   = BigDecimal.valueOf(Optional.ofNullable(s.getTotalPrice()).orElse(0));
         BigDecimal advance = BigDecimal.valueOf(Optional.ofNullable(s.getAdvancePrice()).orElse(0));
 
+        // Peşinat
         if (advance.compareTo(BigDecimal.ZERO) > 0) {
-            LocalDate created = s.getCreatedDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            Date at09 = Date.from(created.atTime(9, 0).atZone(ZoneId.systemDefault()).toInstant());
-            plan.add(new PlanItem("Peşinat", at09, advance));
+            Date advanceDate = new Date(); // güvenli tarafta yine "şimdi" bırakıyoruz; isterseniz başka strateji koyabilirsiniz
+            plan.add(new PlanItem("Peşinat", advanceDate, advance));
         }
 
+        // Kalanı taksitlere böl
         BigDecimal remaining = total.subtract(advance);
         if (remaining.compareTo(BigDecimal.ZERO) <= 0) return plan;
 
         BigDecimal[] divRem = remaining.divideAndRemainder(BigDecimal.valueOf(installmentCount));
         BigDecimal base = divRem[0];
-        BigDecimal remainder = divRem[1];
+        BigDecimal rem  = divRem[1];
 
+        // Taksitlerin tarihleri (ayın 1'i 09:00 varsayımı)
         LocalDate created = s.getCreatedDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-        int startYear = created.getYear();
+        int startYear  = created.getYear();
         int startMonth = Optional.ofNullable(s.getStartMonth()).orElse(LocalDate.now().getMonthValue());
-        LocalDate startDate = LocalDate.of(startYear, startMonth, 1);
+        LocalDate firstDue = LocalDate.of(startYear, startMonth, 1);
 
         for (int i = 0; i < installmentCount; i++) {
-            LocalDate due = startDate.plusMonths(i);
-            Date at09 = Date.from(due.atTime(9, 0).atZone(ZoneId.systemDefault()).toInstant());
-
+            LocalDate due = firstDue.plusMonths(i);
+            Date at09 = Date.from(due.atTime(9,0).atZone(ZoneId.systemDefault()).toInstant());
             BigDecimal amt = base;
-            if (remainder.compareTo(BigDecimal.ZERO) > 0) {
+            if (rem.compareTo(BigDecimal.ZERO) > 0) {
                 amt = amt.add(BigDecimal.ONE);
-                remainder = remainder.subtract(BigDecimal.ONE);
+                rem = rem.subtract(BigDecimal.ONE);
             }
-
-            String title = "Paket Dersi Düzenli - Taksit " + (i + 1);
-            plan.add(new PlanItem(title, at09, amt));
+            plan.add(new PlanItem("Paket Dersi Düzenli - Taksit " + (i + 1), at09, amt));
         }
 
         return plan;
@@ -506,19 +506,12 @@ public class EventsServiceImpl implements EventsService {
 
     @Override
     @Transactional
-    public void reconcilePaymentsForStudent(StudentsEntity student, String username) {
-        List<PlanItem> plan = buildPlannedSchedule(student);
+    public void reconcilePaymentsForStudent(StudentsEntity student, String username, boolean planChanged, boolean advanceChanged) {
+        if (!planChanged) return;
 
-        // 1) Mevcut öğrenci events/payments çek
-        // Tercih A: özel bir repository metodu varsa (önerilir)
-        List<EventsEntity> existingEvents = eventsRepository
-                .findByStudentIdAndEventStatusAndPriceToTeacher(student.getStudentId(), true, false);
+        List<PlanItem> plan = buildPlannedSchedule(student, /*advanceDateNow*/ true);
 
-        // Tercih B: daha geniş al, sonradan filtrele
-        //List<EventsEntity> existingEvents = eventsRepository.findByStudentId(student.getStudentId());
-
-        Set<String> validTitles = new HashSet<>();
-        validTitles.add("Peşinat");
+        List<EventsEntity> existingEvents = eventsRepository.findByStudentId(student.getStudentId());
 
         Map<String, EventsEntity> byTitle = new HashMap<>();
         for (EventsEntity ev : existingEvents) {
@@ -546,10 +539,11 @@ public class EventsServiceImpl implements EventsService {
             } else {
                 boolean changed = false;
 
-                if (!Objects.equals(trimToDay(ev.getDate()), trimToDay(item.getDate()))) {
+                if (!Objects.equals(ev.getDate(), item.getDate())) {
                     ev.setDate(item.getDate());
                     changed = true;
                 }
+
                 PaymentEntity p = paymentRepository.findByEventIdAndPaymentType(ev.getEventId(), 0);
                 if (p != null) {
                     long newAmount = item.getAmount().longValue();
@@ -583,12 +577,12 @@ public class EventsServiceImpl implements EventsService {
 
             if (received == 0L) {
                 if (p != null) {
-                    p.setPaymentStatus(2);
+                    p.setPaymentStatus(0);
                     p.setUpdatedBy(username);
                     p.setUpdatedDate(new Date());
                     paymentRepository.save(p);
                 }
-                ev.setEventStatus(false);
+                ev.setEventStatus(true);
                 ev.setUpdatedBy(username);
                 ev.setUpdatedDate(new Date());
                 eventsRepository.save(ev);
@@ -606,8 +600,8 @@ public class EventsServiceImpl implements EventsService {
     @Setter
     @AllArgsConstructor
     private static class PlanItem {
-        private String title;   // "Peşinat" veya "Paket Dersi Düzenli - Taksit i"
-        private Date date;      // due 09:00
+        private String title;
+        private Date date;
         private BigDecimal amount;
     }
 }

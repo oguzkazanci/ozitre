@@ -30,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
+import java.math.BigDecimal;
 import java.net.JarURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -44,9 +45,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -107,83 +108,169 @@ public class PaymentPdfCreatorServiceImpl implements PaymentPdfCreatorService {
     }
 
     @Override
-    public void createEvent(List<EventWithPaymentDto> eventWithPaymentList) {
-        float[] fullwidth ={fourCol*4};
+    public void createEvent(List<EventWithPaymentDto> eventWithPaymentList,
+                            StudentsEntity student,
+                            List<PaymentDto> allPackagePayments) {
+        float[] fullwidth = { fourCol * 4 };
         Table fourColTable = new Table(fourColumnWidth);
         DateFormat df = new SimpleDateFormat("dd-MM-yyyy");
 
+        BigDecimal totalPrice = BigDecimal.valueOf(student.getTotalPrice() == null ? 0 : student.getTotalPrice());
+        BigDecimal advance    = BigDecimal.valueOf(student.getAdvancePrice() == null ? 0 : student.getAdvancePrice());
+
+        long paidInstallments = 0L;
+        long remainingInstallments = 0L;
+        BigDecimal paidTotal = BigDecimal.ZERO;
+        BigDecimal remainingTotal = BigDecimal.ZERO;
+
+        for (PaymentDto p : allPackagePayments) {
+            BigDecimal remain   = BigDecimal.valueOf(p.getRemainingAmount() == null ? 0 : p.getRemainingAmount());
+            BigDecimal received = BigDecimal.valueOf(p.getAmountReceived() == null ? 0 : p.getAmountReceived());
+            paidTotal = paidTotal.add(received);
+            remainingTotal = remainingTotal.add(remain);
+        }
+        for (PaymentDto p : allPackagePayments) {
+            long remain = p.getRemainingAmount() == null ? 0L : p.getRemainingAmount();
+            long amount = p.getPaymentAmount() == null ? 0L : p.getPaymentAmount();
+            boolean isPaid = (remain == 0 && amount > 0);
+            if (isPaid) paidInstallments++; else remainingInstallments++;
+        }
+
+        Table summary = new Table(new float[]{ threeCol, threeCol, threeCol });
+        summary.addCell(cellKeyVal("Toplam Paket Tutarı", fmt(totalPrice)));
+        summary.addCell(cellKeyVal("Peşinat", fmt(advance)));
+        summary.addCell(cellKeyVal("Ödenen Toplam", fmt(paidTotal)));
+        summary.addCell(cellKeyVal("Kalan Toplam", fmt(remainingTotal)));
+        summary.addCell(cellKeyVal("Ödenen Taksit", String.valueOf(paidInstallments)));
+        summary.addCell(cellKeyVal("Kalan Taksit", String.valueOf(remainingInstallments)));
+
+        document.add(new Paragraph("Paket Özeti").setBold());
+        document.add(summary.setMarginBottom(12f));
+        document.add(fullwidthDashedBorder(fullwidth));
+
         float totalSum = 0;
         float remainingTotalSum = 0;
-        for (EventWithPaymentDto eventWithPaymentDto: eventWithPaymentList) {
-            EventsDto event = eventWithPaymentDto.getEvent();
-            PaymentDto payment = eventWithPaymentDto.getPayment();
+
+        List<EventWithPaymentDto> packageRows = new ArrayList<>();
+        List<EventWithPaymentDto> lessonRows  = new ArrayList<>();
+        for (EventWithPaymentDto ewp : eventWithPaymentList) {
+            EventsDto ev = ewp.getEvent();
+            if (ev.getTeacherId() == null || ev.getLessonId() == null) {
+                packageRows.add(ewp);
+            } else {
+                lessonRows.add(ewp);
+            }
+        }
+
+        packageRows.sort((a, b) -> {
+            int ra = rankForPackageTitle(a.getEvent().getTitle());
+            int rb = rankForPackageTitle(b.getEvent().getTitle());
+            if (ra != rb) return Integer.compare(ra, rb);
+            Date da = a.getEvent().getDate();
+            Date db = b.getEvent().getDate();
+            return da.compareTo(db);
+        });
+
+        lessonRows.sort(Comparator.comparing(o -> o.getEvent().getDate()));
+
+        List<EventWithPaymentDto> ordered = new ArrayList<>(packageRows);
+        ordered.addAll(lessonRows);
+
+        for (EventWithPaymentDto ewp : ordered) {
+            EventsDto event = ewp.getEvent();
+            PaymentDto pay  = ewp.getPayment();
 
             if (event.getTeacherId() != null && event.getLessonId() != null) {
                 try {
                     LessonEntity lessonEntity = lessonsRepository.getReferenceById(event.getLessonId());
                     TeacherEntity teacherEntity = teachersRepository.getReferenceById(event.getTeacherId());
                     fourColTable.addCell(new Cell().add(lessonEntity.getLesson().trim() + " danışmanlığı").setFontSize(8)).setWidth(400);
-                    fourColTable.addCell(new Cell().add(teacherEntity.getTeacherName() + " " + teacherEntity.getTeacherSurname()).setTextAlignment(TextAlignment.CENTER).setFontSize(8)).setWidth(520);
-                    fourColTable.addCell(new Cell().add(df.format(event.getDate())).setTextAlignment(TextAlignment.CENTER).setFontSize(8)).setWidth(520);
-                    fourColTable.addCell(new Cell().add(payment.getPaymentAmount() + " tl").setTextAlignment(TextAlignment.RIGHT).setFontSize(8)).setWidth(520);
-                    totalSum = totalSum + payment.getPaymentAmount();
-                    if (payment.getRemainingAmount() != null) remainingTotalSum = remainingTotalSum + payment.getRemainingAmount();
-                } catch (Exception e) {
-                    System.out.println(e.getMessage());
-                }
+                    fourColTable.addCell(new Cell().add(teacherEntity.getTeacherName() + " " + teacherEntity.getTeacherSurname())
+                            .setTextAlignment(TextAlignment.CENTER).setFontSize(8)).setWidth(520);
+                    fourColTable.addCell(new Cell().add(df.format(event.getDate()))
+                            .setTextAlignment(TextAlignment.CENTER).setFontSize(8)).setWidth(520);
+                    fourColTable.addCell(new Cell().add((pay.getPaymentAmount() == null ? 0 : pay.getPaymentAmount()) + " tl")
+                            .setTextAlignment(TextAlignment.RIGHT).setFontSize(8)).setWidth(520);
+
+                    totalSum += pay.getPaymentAmount() == null ? 0 : pay.getPaymentAmount();
+                    remainingTotalSum += pay.getRemainingAmount() == null ? 0 : pay.getRemainingAmount();
+                } catch (Exception ignore) {}
             } else {
-                StudentsEntity studentEntity = studentsRepository.getReferenceById(event.getStudentId());
-                PackageEntity packageEntity = packageRepository.getReferenceById(studentEntity.getPackageId());
-                LocalDate date = event.getDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                StudentsEntity s = studentsRepository.getReferenceById(event.getStudentId());
+                PackageEntity pkg = packageRepository.getReferenceById(s.getPackageId());
 
-                LocalDate createDate = studentEntity.getCreatedDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-                LocalDate startDate = LocalDate.of(createDate.getYear(), studentEntity.getStartMonth(), 1);
-                LocalDate now = LocalDate.now();
+                String monthName = event.getDate().toInstant().atZone(ZoneId.systemDefault())
+                        .toLocalDate().getMonth()
+                        .getDisplayName(java.time.format.TextStyle.FULL, new java.util.Locale("tr"));
 
-                // Başlangıç tarihinden itibaren geçen ay sayısını hesapla
-                long elapsedMonths = ChronoUnit.MONTHS.between(startDate.withDayOfMonth(1), now.withDayOfMonth(1));
+                String installmentLabel;
+                if (isAdvanceTitle(event.getTitle())) {
+                    installmentLabel = "Peşinat";
+                } else if (event.getTitle() != null && event.getTitle().contains("Taksit")) {
+                    installmentLabel = event.getTitle().replace("Paket Dersi Düzenli - ", "");
+                } else {
+                    installmentLabel = "—";
+                }
 
-                // Geçen taksit sayısını hesapla
-                int currentInstallment = Math.min((int) elapsedMonths + 1, studentEntity.getInstallment());
+                fourColTable.addCell(new Cell().add(pkg.getPackageName().trim()).setFontSize(8)).setWidth(520);
+                fourColTable.addCell(new Cell().add(monthName).setTextAlignment(TextAlignment.CENTER).setFontSize(8)).setWidth(400);
+                fourColTable.addCell(new Cell().add(installmentLabel).setTextAlignment(TextAlignment.RIGHT).setFontSize(8)).setWidth(520);
+                fourColTable.addCell(new Cell().add((pay.getPaymentAmount() == null ? 0 : pay.getPaymentAmount()) + " tl")
+                        .setTextAlignment(TextAlignment.RIGHT).setFontSize(8)).setWidth(520);
 
-                // Kalan taksit sayısı
-                int remainingInstallments = studentEntity.getInstallment() - currentInstallment;
-
-                // Kalan miktar
-                int installmentAmount = studentEntity.getTotalPrice() / studentEntity.getInstallment();
-                double remainingAmount = remainingInstallments * installmentAmount;
-
-                fourColTable.addCell(new Cell().add(packageEntity.getPackageName().trim()).setFontSize(8)).setWidth(520);
-                fourColTable.addCell(new Cell().add(Month.of(date.getMonthValue()).getDisplayName(TextStyle.FULL, new Locale("tr"))).setTextAlignment(TextAlignment.CENTER).setFontSize(8)).setWidth(400);
-                fourColTable.addCell(new Cell().add(currentInstallment + "/" + studentEntity.getInstallment()).setTextAlignment(TextAlignment.RIGHT).setFontSize(8)).setWidth(520);
-                fourColTable.addCell(new Cell().add(installmentAmount + " tl").setTextAlignment(TextAlignment.RIGHT).setFontSize(8)).setWidth(520);
-                totalSum = totalSum + installmentAmount;
-                remainingTotalSum = (float) remainingAmount;
+                totalSum += pay.getPaymentAmount() == null ? 0 : pay.getPaymentAmount();
+                remainingTotalSum += pay.getRemainingAmount() == null ? 0 : pay.getRemainingAmount();
             }
         }
 
+        document.add(new Paragraph("Aylık Detay").setBold().setMarginTop(10f));
         document.add(fourColTable.setMarginBottom(20f));
-        float[] oneTwo ={threeCol + 125f, threeCol * 2};
+
+        float[] oneTwo = { threeCol + 125f, threeCol * 2 };
         Table threeColTable4 = new Table(oneTwo);
         threeColTable4.addCell(new Cell().add("").setBorder(Border.NO_BORDER));
         threeColTable4.addCell(new Cell().add(fullwidthDashedBorder(fullwidth)).setBorder(Border.NO_BORDER));
         document.add(threeColTable4);
 
-        Table threeColTable3=new Table(threeColumnWidth);
-        threeColTable3.addCell(new Cell().add("").setBorder(Border.NO_BORDER)).setMarginLeft(10f);
-        threeColTable3.addCell(new Cell().add("Toplam Tutar").setTextAlignment(TextAlignment.CENTER).setBorder(Border.NO_BORDER));
-        threeColTable3.addCell(new Cell().add(String.valueOf(totalSum) + " tl").setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER)).setMarginRight(15f);
-        threeColTable3.addCell(new Cell().add("").setBorder(Border.NO_BORDER));
-        threeColTable3.addCell(new Cell().add("").setBorder(Border.NO_BORDER));
-        threeColTable3.addCell(new Cell().add(fullwidthDashedBorder(fullwidth)).setBorder(Border.NO_BORDER));
-        threeColTable3.addCell(new Cell().add("").setBorder(Border.NO_BORDER)).setMarginLeft(10f);
-        threeColTable3.addCell(new Cell().add("Kalan Toplam Tutar").setTextAlignment(TextAlignment.CENTER).setBorder(Border.NO_BORDER));
-        threeColTable3.addCell(new Cell().add(String.valueOf(remainingTotalSum) + " tl").setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER)).setMarginRight(15f);
+        Table totals = new Table(threeColumnWidth);
+        totals.addCell(new Cell().add("").setBorder(Border.NO_BORDER)).setMarginLeft(10f);
+        totals.addCell(new Cell().add("Aylık Toplam").setTextAlignment(TextAlignment.CENTER).setBorder(Border.NO_BORDER));
+        totals.addCell(new Cell().add(String.valueOf(totalSum) + " tl").setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER)).setMarginRight(15f);
+        totals.addCell(new Cell().add("").setBorder(Border.NO_BORDER));
+        totals.addCell(new Cell().add("").setBorder(Border.NO_BORDER));
+        totals.addCell(new Cell().add(fullwidthDashedBorder(fullwidth)).setBorder(Border.NO_BORDER));
+        totals.addCell(new Cell().add("").setBorder(Border.NO_BORDER)).setMarginLeft(10f);
+        totals.addCell(new Cell().add("Aylık Kalan Toplam").setTextAlignment(TextAlignment.CENTER).setBorder(Border.NO_BORDER));
+        totals.addCell(new Cell().add(String.valueOf(remainingTotalSum) + " tl").setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER)).setMarginRight(15f);
 
-        document.add(threeColTable3);
+        document.add(totals);
         document.add(fullwidthDashedBorder(fullwidth));
         document.add(new Paragraph("\n"));
         document.add(getDividerTable(fullwidth).setBorder(new SolidBorder(Color.GRAY,1)).setMarginBottom(15f));
+    }
+
+    private String fmt(BigDecimal v) { return v == null ? "0 tl" : v.toPlainString() + " tl"; }
+    private Cell cellKeyVal(String key, String val) {
+        Table t = new Table(new float[]{ threeCol, threeCol });
+        t.addCell(new Cell().add(key).setBorder(Border.NO_BORDER).setFontSize(9).setBold());
+        t.addCell(new Cell().add(val).setBorder(Border.NO_BORDER).setFontSize(9).setTextAlignment(TextAlignment.RIGHT));
+        return new Cell().add(t).setBorder(Border.NO_BORDER).setPadding(4);
+    }
+
+    private boolean isAdvanceTitle(String title) {
+        return title != null && title.trim().equalsIgnoreCase("Peşinat");
+    }
+
+    private int rankForPackageTitle(String title) {
+        if (isAdvanceTitle(title)) return 0;
+
+        if (title != null) {
+            Matcher m = Pattern.compile("Taksit\\s+(\\d+)").matcher(title);
+            if (m.find()) {
+                try { return Integer.parseInt(m.group(1)); } catch (NumberFormatException ignore) {}
+            }
+        }
+        return Integer.MAX_VALUE;
     }
 
     @Override

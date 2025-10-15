@@ -98,34 +98,41 @@ public class StudentsServiceImpl implements StudentsService {
         studentsDto.setParent(StringUtils.capitalize(studentsDto.getParent()));
         studentsDto.setAddress(StringUtils.capitalize(studentsDto.getAddress()));
         studentsDto.setSchool(StringUtils.capitalize(studentsDto.getSchool()));
+
         StudentsEntity student = modelMapper.map(studentsDto, StudentsEntity.class);
         student.setCompanyId(companyId);
 
         if (prevOpt.isPresent()) {
             StudentsEntity prev = prevOpt.get();
+
+            boolean changedAdvance     = !Objects.equals(prev.getAdvancePrice(),   student.getAdvancePrice());
+            boolean changedInstallment = !Objects.equals(prev.getInstallment(),    student.getInstallment());
+            boolean changedTotal       = !Objects.equals(prev.getTotalPrice(),     student.getTotalPrice());
+            boolean planChanged = changedAdvance || changedInstallment || changedTotal;
+
             student.setCreatedBy(prev.getCreatedBy());
             student.setCreatedDate(prev.getCreatedDate());
             student.setUpdatedDate(new Date());
             student.setUpdatedBy(username);
+
             student = studentsRepository.save(student);
 
-            if (student.getPackageId() != null && student.getInstallment() != null && student.getInstallment() > 0) {
-                eventsService.reconcilePaymentsForStudent(student, username);
+            if (planChanged && student.getPackageId() != null && student.getInstallment() != null && student.getInstallment() > 0) {
+                eventsService.reconcilePaymentsForStudent(student, username, true /*planChanged*/, changedAdvance /*advanceChanged*/);
             }
 
         } else {
+            // İlk kayıt
             student.setCreatedDate(new Date());
             student.setCreatedBy(username);
             saveUser(student);
             student = studentsRepository.save(student);
 
-            // İlk oluşturma: isterseniz reconcile da kullanabilirsiniz.
             if (student.getPackageId() != null && student.getInstallment() != null && student.getInstallment() > 0) {
-                eventsService.reconcilePaymentsForStudent(student, username);
-                // veya mevcut fonksiyonuz:
-                // eventsService.scheduleInstallmentsForStudent(student, username);
+                eventsService.reconcilePaymentsForStudent(student, username, true, true);
             }
         }
+
         return modelMapper.map(student, StudentsDto.class);
     }
 

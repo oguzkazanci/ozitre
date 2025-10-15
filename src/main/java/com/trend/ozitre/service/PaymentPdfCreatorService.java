@@ -2,7 +2,9 @@ package com.trend.ozitre.service;
 
 import com.trend.ozitre.dto.EventWithPaymentDto;
 import com.trend.ozitre.dto.EventsDto;
+import com.trend.ozitre.dto.PaymentDto;
 import com.trend.ozitre.entity.EventsEntity;
+import com.trend.ozitre.entity.StudentsEntity;
 import com.trend.ozitre.model.AddressDetails;
 import com.trend.ozitre.model.HeaderDetails;
 import com.trend.ozitre.model.PackageTableHeader;
@@ -19,7 +21,7 @@ public interface PaymentPdfCreatorService {
 
     void createTnc(List<String> TncList, Boolean lastPage, String imagePath);
 
-    void createEvent(List<EventWithPaymentDto> eventsList);
+    void createEvent(List<EventWithPaymentDto> eventWithPaymentList, StudentsEntity student, List<PaymentDto> allPackagePayments);
 
     void createTableHeader(ProductTableHeader productTableHeader);
 

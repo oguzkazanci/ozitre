@@ -44,5 +44,6 @@ public interface EventsService {
 
     void scheduleInstallmentsForStudent(StudentsEntity student, String username);
 
-    public void reconcilePaymentsForStudent(StudentsEntity student, String username);
+    void reconcilePaymentsForStudent(StudentsEntity student, String username, boolean planChanged, boolean advanceChanged);
+
 }
