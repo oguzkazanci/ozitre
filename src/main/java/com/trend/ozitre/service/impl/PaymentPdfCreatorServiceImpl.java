@@ -125,6 +125,7 @@ public class PaymentPdfCreatorServiceImpl implements PaymentPdfCreatorService {
         BigDecimal paidTotal = BigDecimal.ZERO;
         BigDecimal remainingTotal = BigDecimal.ZERO;
 
+        if (allPackagePayments == null) allPackagePayments = Collections.emptyList();
         for (PaymentDto p : allPackagePayments) {
             BigDecimal remain = BigDecimal.valueOf(p.getRemainingAmount() == null ? 0 : p.getRemainingAmount());
             BigDecimal received = BigDecimal.valueOf(p.getAmountReceived() == null ? 0 : p.getAmountReceived());
@@ -275,9 +276,7 @@ public class PaymentPdfCreatorServiceImpl implements PaymentPdfCreatorService {
                 StudentsEntity s = studentsRepository.getReferenceById(event.getStudentId());
                 PackageEntity pkg = packageRepository.getReferenceById(s.getPackageId());
 
-                String monthName = event.getDate().toInstant().atZone(ZoneId.systemDefault())
-                        .toLocalDate().getMonth()
-                        .getDisplayName(java.time.format.TextStyle.FULL, new java.util.Locale("tr"));
+                String monthName = monthNameOf(event.getDate());
 
                 String installmentLabel;
                 if (isAdvanceTitle(event.getTitle())) {
@@ -327,6 +326,16 @@ public class PaymentPdfCreatorServiceImpl implements PaymentPdfCreatorService {
 
     private String fmt(BigDecimal v) {
         return v == null ? "0 tl" : v.toPlainString() + " tl";
+    }
+
+    private static final DateTimeFormatter MONTH_TR =
+            DateTimeFormatter.ofPattern("MMMM", new Locale("tr"));
+
+    private static String monthNameOf(Date date) {
+        return date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+                .format(MONTH_TR);
     }
 
     private Cell cellKeyVal(String key, String val) {
