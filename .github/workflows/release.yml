@@ -45,50 +45,44 @@ jobs:
         working-directory: trendders-ui
         shell: pwsh
         run: |
-          # Eğer package.json'da "build" script'in varsa bunu kullanmak da mümkün:
-          # npm run build --if-present || npx -y @angular/cli@latest build --configuration production
-          npx -y @angular/cli@latest build --configuration production
+          # package.json'da "build" script'in varsa önce onu dener, yoksa Angular CLI ile derler
+          npm run build --if-present || npx -y @angular/cli@latest build --configuration production
 
-      # --- DIAGNOSTIC: Build çıktılarını listele ---
+      # --- DIAGNOSTIC: UI çıktılarını göster (ilk sefer için yararlı) ---
       - name: Debug UI outputs
         working-directory: trendders-ui
         shell: pwsh
         run: |
           Write-Host "Workspace: $(Get-Location)"
-          Write-Host "angular.json varsa outputPath'i yazdır:" 
           if (Test-Path angular.json) {
             $cfg = Get-Content angular.json -Raw | ConvertFrom-Json
-            $projNames = @()
-            if ($cfg.projects) { $projNames = $cfg.projects.PSObject.Properties.Name }
-            Write-Host "Projects:" ($projNames -join ", ")
-            foreach ($p in $projNames) {
-              $op1 = $cfg.projects.$p.architect.build.options.outputPath
-              $op2 = $cfg.projects.$p.targets.build.options.outputPath
-              if ($op1) { Write-Host "$p.outputPath: $op1" }
-              elseif ($op2) { Write-Host "$p.outputPath: $op2" }
+            if ($cfg.projects) {
+              $projNames = $cfg.projects.PSObject.Properties.Name
+              Write-Host "Projects:" ($projNames -join ", ")
+              foreach ($p in $projNames) {
+                $op1 = $cfg.projects.$p.architect.build.options.outputPath
+                $op2 = $cfg.projects.$p.targets.build.options.outputPath
+                if ($op1) { Write-Host "$p.outputPath: $op1" }
+                elseif ($op2) { Write-Host "$p.outputPath: $op2" }
+              }
             }
           }
-          Write-Host "Dist / www klasörleri:"
-          Get-ChildItem -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object {
-            $_.Name -in @("dist","www","browser")
-          } | Select-Object FullName, LastWriteTime | Format-Table
-
           Write-Host "index.html içeren klasörler:"
           Get-ChildItem -Recurse -Filter index.html -ErrorAction SilentlyContinue | ForEach-Object {
             $_.DirectoryName
           } | Sort-Object -Unique | ForEach-Object { Write-Host $_ }
 
-      # UI çıktısını ozitre static'e kopyala (index.html'e göre otomatik bul)
+      # UI çıktısını ozitre static'e kopyala (index.html'e göre otomatik bulur)
       - name: Copy UI build into ozitre static
         shell: pwsh
         run: |
-          $static = "backend\src\main\resources\static"
+          $static = "src\main\resources\static"
           if (-not (Test-Path $static)) { New-Item -ItemType Directory -Path $static | Out-Null }
 
-          # Eski dosyaları temizle
+          # Eski dosyaları temizle (stale asset kalmasın)
           Get-ChildItem $static -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
-          # trendders-ui altında index.html içeren tüm klasörleri bul
+          # trendders-ui altında index.html içeren klasörleri bul
           $indexDirs = Get-ChildItem "trendders-ui" -Recurse -Filter index.html -ErrorAction SilentlyContinue `
             | ForEach-Object { $_.Directory } `
             | Sort-Object LastWriteTime -Descending
@@ -98,12 +92,12 @@ jobs:
             exit 1
           }
 
-          # En güncel olanı seç
+          # En güncel olan klasörü seç
           $srcDir = $indexDirs[0].FullName
           Write-Host "Copying from: $srcDir"
           Copy-Item (Join-Path $srcDir "*") $static -Recurse -Force
 
-      # Java
+      # Java (pom.xml kökte olduğu için working-directory yok)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -111,11 +105,10 @@ jobs:
           java-version: 17
 
       - name: Build ozitre
-        working-directory: backend
         run: mvn -B -DskipTests clean package
 
-      # Release
+      # Release (target/*.jar çünkü pom kökte)
       - name: Upload Release
         uses: softprops/action-gh-release@v2
         with:
-          files: backend/target/*.jar
+          files: target/*.jar
