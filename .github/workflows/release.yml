@@ -45,45 +45,63 @@ jobs:
         working-directory: trendders-ui
         shell: pwsh
         run: |
+          # Eğer package.json'da "build" script'in varsa bunu kullanmak da mümkün:
+          # npm run build --if-present || npx -y @angular/cli@latest build --configuration production
           npx -y @angular/cli@latest build --configuration production
 
-      # UI çıktısını ozitre static'e kopyala (www / dist / dist/<project>/browser)
+      # --- DIAGNOSTIC: Build çıktılarını listele ---
+      - name: Debug UI outputs
+        working-directory: trendders-ui
+        shell: pwsh
+        run: |
+          Write-Host "Workspace: $(Get-Location)"
+          Write-Host "angular.json varsa outputPath'i yazdır:" 
+          if (Test-Path angular.json) {
+            $cfg = Get-Content angular.json -Raw | ConvertFrom-Json
+            $projNames = @()
+            if ($cfg.projects) { $projNames = $cfg.projects.PSObject.Properties.Name }
+            Write-Host "Projects:" ($projNames -join ", ")
+            foreach ($p in $projNames) {
+              $op1 = $cfg.projects.$p.architect.build.options.outputPath
+              $op2 = $cfg.projects.$p.targets.build.options.outputPath
+              if ($op1) { Write-Host "$p.outputPath: $op1" }
+              elseif ($op2) { Write-Host "$p.outputPath: $op2" }
+            }
+          }
+          Write-Host "Dist / www klasörleri:"
+          Get-ChildItem -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object {
+            $_.Name -in @("dist","www","browser")
+          } | Select-Object FullName, LastWriteTime | Format-Table
+
+          Write-Host "index.html içeren klasörler:"
+          Get-ChildItem -Recurse -Filter index.html -ErrorAction SilentlyContinue | ForEach-Object {
+            $_.DirectoryName
+          } | Sort-Object -Unique | ForEach-Object { Write-Host $_ }
+
+      # UI çıktısını ozitre static'e kopyala (index.html'e göre otomatik bul)
       - name: Copy UI build into ozitre static
         shell: pwsh
         run: |
           $static = "backend\src\main\resources\static"
           if (-not (Test-Path $static)) { New-Item -ItemType Directory -Path $static | Out-Null }
 
-          # Eski dosyaları temizle (stale asset kalmasın)
+          # Eski dosyaları temizle
           Get-ChildItem $static -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
-          # Olası çıkış klasörleri (Ionic/Capacitor ve Angular farklılıkları)
-          $cand = @()
+          # trendders-ui altında index.html içeren tüm klasörleri bul
+          $indexDirs = Get-ChildItem "trendders-ui" -Recurse -Filter index.html -ErrorAction SilentlyContinue `
+            | ForEach-Object { $_.Directory } `
+            | Sort-Object LastWriteTime -Descending
 
-          $www = "trendders-ui\www"
-          if (Test-Path $www) { $cand += $www }
-
-          $distRoot = "trendders-ui\dist"
-          if (Test-Path $distRoot) {
-            # Angular 17+: dist/<project>/browser
-            $firstProj = Get-ChildItem $distRoot -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($firstProj) {
-              $browser = Join-Path $firstProj.FullName "browser"
-              if (Test-Path $browser) { $cand += $browser } else { $cand += $firstProj.FullName }
-            } else {
-              # dist düz ise
-              $cand += $distRoot
-            }
-          }
-
-          if (-not $cand -or $cand.Count -eq 0) {
-            Write-Error "UI build output not found. Checked: www, dist, dist/<project>/browser"
+          if (-not $indexDirs -or $indexDirs.Count -eq 0) {
+            Write-Error "UI build output not found. No index.html produced under trendders-ui."
             exit 1
           }
 
-          $src = $cand[0]
-          Write-Host "Copying from: $src"
-          Copy-Item "$src\*" $static -Recurse -Force
+          # En güncel olanı seç
+          $srcDir = $indexDirs[0].FullName
+          Write-Host "Copying from: $srcDir"
+          Copy-Item (Join-Path $srcDir "*") $static -Recurse -Force
 
       # Java
       - name: Setup Java
