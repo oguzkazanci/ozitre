@@ -8,9 +8,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class SpaForwardingConfig implements WebMvcConfigurer {
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
-        registry.addViewController("/{path:^(?!api|actuator|static).*$}")
+        registry.addViewController("/{path:^(?!api|actuator|assets|static|favicon\\.ico|robots\\.txt|h2-console).*$}")
                 .setViewName("forward:/index.html");
-        registry.addViewController("/**/{path:^(?!api|actuator|static).*$}")
+        registry.addViewController("/**/{path:^(?!api|actuator|assets|static).*$}")
                 .setViewName("forward:/index.html");
     }
 }
