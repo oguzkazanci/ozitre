@@ -1,7 +1,11 @@
 name: Build & Release (ozitre + trendders-ui)
+
 on:
   push:
     tags: ["v*"]   # v1.0.0 gibi tag atınca release çıkar
+
+permissions:
+  contents: write  # release'e asset yüklemek için gerekli
 
 jobs:
   build:
@@ -16,41 +20,56 @@ jobs:
           repository: oguzkazanci/trendders-ui
           path: trendders-ui
 
-      # Angular build
+      # Node
       - name: Setup Node
         uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            trendders-ui/package-lock.json
+            trendders-ui/package.json
+
+      # Lockfile yoksa npm install'a düş, varsa npm ci
+      - name: Install deps
+        working-directory: trendders-ui
+        shell: pwsh
+        run: |
+          if (Test-Path package-lock.json) {
+            npm ci --no-audit --no-fund
+          } else {
+            npm install --no-audit --no-fund
+          }
 
       - name: Build trendders-ui
         working-directory: trendders-ui
+        shell: pwsh
         run: |
-          npm ci
-          npx ng build --configuration production
+          npx -y @angular/cli@latest build --configuration production
 
       # dist -> ozitre static
       - name: Copy dist into ozitre static
-      shell: pwsh
-      run: |
-        $static = "backend\src\main\resources\static"
-        if (-not (Test-Path $static)) { New-Item -ItemType Directory -Path $static | Out-Null }
+        shell: pwsh
+        run: |
+          $static = "backend\src\main\resources\static"
+          if (-not (Test-Path $static)) { New-Item -ItemType Directory -Path $static | Out-Null }
 
-        $distRoot = "trendders-ui\dist"
-        # Angular 17+ için olası yapı: dist/<project>/browser
-        $projDir = Get-ChildItem $distRoot -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($projDir) {
-          $browser = Join-Path $projDir.FullName "browser"
-          if (Test-Path $browser) {
-            Copy-Item "$browser\*" $static -Recurse -Force
+          $distRoot = "trendders-ui\dist"
+          # Angular 17+: dist/<project>/browser ihtimali
+          $projDir = Get-ChildItem $distRoot -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($projDir) {
+            $browser = Join-Path $projDir.FullName "browser"
+            if (Test-Path $browser) {
+              Copy-Item "$browser\*" $static -Recurse -Force
+            } else {
+              Copy-Item "$($projDir.FullName)\*" $static -Recurse -Force
+            }
           } else {
-            Copy-Item "$($projDir.FullName)\*" $static -Recurse -Force
+            # dist düz ise
+            Copy-Item "$distRoot\*" $static -Recurse -Force
           }
-        } else {
-          # dist düz ise
-          Copy-Item "$distRoot\*" $static -Recurse -Force
-        }
 
-
-      # Java build
+      # Java
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -61,7 +80,7 @@ jobs:
         working-directory: backend
         run: mvn -B -DskipTests clean package
 
-      # Release: backend/target içindeki JAR'ı yükle
+      # Release
       - name: Upload Release
         uses: softprops/action-gh-release@v2
         with:
