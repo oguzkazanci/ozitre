@@ -1,0 +1,51 @@
+name: Build & Release (ozitre + trendders-ui)
+on:
+  push:
+    tags: ["v*"]   # v1.0.0 gibi tag atınca release çıkar
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout ozitre
+        uses: actions/checkout@v4
+
+      - name: Checkout trendders-ui
+        uses: actions/checkout@v4
+        with:
+          repository: oguzkazanci/trendders-ui
+          path: trendders-ui
+
+      # Angular build
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with: { node-version: 20 }
+
+      - name: Build trendders-ui
+        working-directory: trendders-ui
+        run: |
+          npm ci
+          npx ng build --configuration production
+
+      # dist -> ozitre static
+      - name: Copy dist into ozitre static
+        run: |
+          if not exist backend\src\main\resources\static mkdir backend\src\main\resources\static
+          xcopy /E /I /Y trendders-ui\dist\* backend\src\main\resources\static\
+
+      # Java build
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build ozitre
+        working-directory: backend
+        run: mvn -B -DskipTests clean package
+
+      # Release: backend/target içindeki JAR'ı yükle
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: backend/target/*.jar
