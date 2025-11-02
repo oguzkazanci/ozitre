@@ -29,25 +29,25 @@ jobs:
 
       # dist -> ozitre static
       - name: Copy dist into ozitre static
-          shell: pwsh
-          run: |
-            $static = "backend\src\main\resources\static"
-            if (-not (Test-Path $static)) { New-Item -ItemType Directory -Path $static | Out-Null }
+      shell: pwsh
+      run: |
+        $static = "backend\src\main\resources\static"
+        if (-not (Test-Path $static)) { New-Item -ItemType Directory -Path $static | Out-Null }
 
-            $distRoot = "trendders-ui\dist"
-            # Angular 17+ için olası yapı: dist/<project>/browser
-            $projDir = Get-ChildItem $distRoot -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($projDir) {
-              $browser = Join-Path $projDir.FullName "browser"
-              if (Test-Path $browser) {
-                Copy-Item "$browser\*" $static -Recurse -Force
-              } else {
-                Copy-Item "$($projDir.FullName)\*" $static -Recurse -Force
-              }
-            } else {
-              # dist düz ise
-              Copy-Item "$distRoot\*" $static -Recurse -Force
-            }
+        $distRoot = "trendders-ui\dist"
+        # Angular 17+ için olası yapı: dist/<project>/browser
+        $projDir = Get-ChildItem $distRoot -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($projDir) {
+          $browser = Join-Path $projDir.FullName "browser"
+          if (Test-Path $browser) {
+            Copy-Item "$browser\*" $static -Recurse -Force
+          } else {
+            Copy-Item "$($projDir.FullName)\*" $static -Recurse -Force
+          }
+        } else {
+          # dist düz ise
+          Copy-Item "$distRoot\*" $static -Recurse -Force
+        }
 
 
       # Java build
