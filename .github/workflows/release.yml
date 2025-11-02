@@ -30,7 +30,7 @@ jobs:
             trendders-ui/package-lock.json
             trendders-ui/package.json
 
-      # Lockfile yoksa npm install'a düş, varsa npm ci
+      # Lockfile varsa npm ci, yoksa npm install
       - name: Install deps
         working-directory: trendders-ui
         shell: pwsh
@@ -47,27 +47,43 @@ jobs:
         run: |
           npx -y @angular/cli@latest build --configuration production
 
-      # dist -> ozitre static
-      - name: Copy dist into ozitre static
+      # UI çıktısını ozitre static'e kopyala (www / dist / dist/<project>/browser)
+      - name: Copy UI build into ozitre static
         shell: pwsh
         run: |
           $static = "backend\src\main\resources\static"
           if (-not (Test-Path $static)) { New-Item -ItemType Directory -Path $static | Out-Null }
 
+          # Eski dosyaları temizle (stale asset kalmasın)
+          Get-ChildItem $static -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+          # Olası çıkış klasörleri (Ionic/Capacitor ve Angular farklılıkları)
+          $cand = @()
+
+          $www = "trendders-ui\www"
+          if (Test-Path $www) { $cand += $www }
+
           $distRoot = "trendders-ui\dist"
-          # Angular 17+: dist/<project>/browser ihtimali
-          $projDir = Get-ChildItem $distRoot -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($projDir) {
-            $browser = Join-Path $projDir.FullName "browser"
-            if (Test-Path $browser) {
-              Copy-Item "$browser\*" $static -Recurse -Force
+          if (Test-Path $distRoot) {
+            # Angular 17+: dist/<project>/browser
+            $firstProj = Get-ChildItem $distRoot -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($firstProj) {
+              $browser = Join-Path $firstProj.FullName "browser"
+              if (Test-Path $browser) { $cand += $browser } else { $cand += $firstProj.FullName }
             } else {
-              Copy-Item "$($projDir.FullName)\*" $static -Recurse -Force
+              # dist düz ise
+              $cand += $distRoot
             }
-          } else {
-            # dist düz ise
-            Copy-Item "$distRoot\*" $static -Recurse -Force
           }
+
+          if (-not $cand -or $cand.Count -eq 0) {
+            Write-Error "UI build output not found. Checked: www, dist, dist/<project>/browser"
+            exit 1
+          }
+
+          $src = $cand[0]
+          Write-Host "Copying from: $src"
+          Copy-Item "$src\*" $static -Recurse -Force
 
       # Java
       - name: Setup Java
