@@ -1,0 +1,10 @@
+"student_id","created_by","created_date","updated_by","updated_date","address","company_id","explanation","grade_id","installment","les_price","mail","name","package_id","parent","par_phone_number","phone_number","registry_state","school","start_month","surname","total_price","username","registry_type","season_id","advance_price"
+6,oguz.kazanci,"2024-08-10 14:40:08.335000",oguz.kazanci,"2024-09-29 15:25:43.203000",Gündüz sk. no:1 iç kapı no:9,1,,9,,,afeskazanci@gmail.com,Sefa oğuz,,Faruk,"5055465777","5330558475",0,Açık lise,,Kazancı,,sefaoguz.kazanci,1,0,
+8,oguz.kazanci,"2024-08-10 18:23:28.860000",oguz.kazanci,"2024-08-13 15:26:56.964000",Gündüz sk. no:1 iç kapı no:9,1,,9,10,,elf.erc11@gmail.com,Elif,3,Uğur,,"05414877042",0,Açık lise,8,Kazancı,300000,elif.kazanci,0,0,
+10,oguz.kazanci,"2024-08-22 09:41:43.071000",oguz.kazanci,"2024-08-22 09:44:16.293000",Gündüz sk. no:1 iç kapı no:9,1,,9,10,,afeskazanci@gmail.com,Ahmet,3,Faruk,,"05330558475",0,Açık lise,8,Mehmet,300000,ahmet.mehmet,0,0,
+12,oguz.kazanci,"2024-08-22 09:46:06.197000",,,Uşak,1,,8,10,,afeskazanci@gmail.com,Erman,3,Faruk,,"05330558475",0,Final,8,Yaşar,300000,erman.yasar,0,0,
+14,oguz.kazanci,"2024-08-22 09:49:59.970000",,,Kartal,1,,4,8,,,Emre,4,Faruk,,"05330558475",0,Açık lise,8,Özcan,300000,emre.ozcan,0,0,
+24,oguz.kazanci,"2025-09-27 13:54:32.122000",oguz.kazanci,"2025-10-15 16:04:26.468000",Dsa,1,,8,5,,dsa,Dsa,3,Dsa,"4123","321",0,Dsa,9,Dsa,60000,dsa.dsa,0,1,10000
+26,oguz.kazanci,"2025-09-27 14:19:56.309000",oguz.kazanci,"2025-10-15 16:08:27.074000",Sda,1,,8,6,,dsa,Dsa,3,Dsa,"321","312",0,Sda,9,Dsa,120000,dsa.dsa,0,1,20000
+28,oguz.kazanci,"2025-09-27 14:40:50.940000",oguz.kazanci,"2025-10-15 16:27:22.572000",Dsa,1,,8,4,,dsa,Fasd,3,Dsa,"31","31",0,Dsa,9,Vca,600000,fasd.vca,0,1,230000
+30,oguz.kazanci,"2025-10-15 16:13:24.876000",oguz.kazanci,"2025-10-15 16:14:03.775000",,1,,9,,,"",Dsavcx,,Svxz,,"421",0,Dsaf,,Saxa,,dsavcx.saxa,1,1,

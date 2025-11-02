@@ -1,0 +1,3 @@
+"teacher_id","created_by","created_date","updated_by","updated_date","company_id","explanation","teacher_address","teacher_les_price","teacher_mail","teacher_name","teacher_phone_number","teacher_state","teacher_surname","username","base_fee","work_type","lesson_id","season_id"
+4,oguz.kazanci,,oguz.kazanci,"2024-10-31 10:57:47.669000",1,"",Kartal,300,hakkiayaz@gmail.com,Hakkı,"05330558475",0,Ayaz,hakki.ayaz,15000,2,1,
+16,oguz.kazanci,"2024-10-08 09:41:39.963000",oguz.kazanci,"2024-10-31 10:49:16.781000",1,"",Htalks,300,hakasikci@gmail.com,Hasan,"",0,Kaşıkçı,hasan.kasikci,0,0,,

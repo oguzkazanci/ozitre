@@ -1,0 +1,25 @@
+"book_id","book_name","exam_type","lesson_id","publisher_id","grade_id"
+1,Orijinal Mat Soru Bankası,0,0,1,11
+2,TYT Geometri,,1,1,10
+52,TYT Matematik Soru Bankası,0,0,2,10
+53,TYT Matematik Soru Bankası,0,0,55,10
+54,TYT Matematik Soru Bankası,0,0,52,10
+55,TYT Matematik Soru Bankası,0,0,53,10
+56,TYT Matematik Soru Bankası,0,0,54,10
+57,MÖF,1,10,55,
+58,AYT Matematik Soru Bankası,1,0,55,11
+59,AYT Matematik Soru Bankası,1,0,2,11
+60,AYT Matematik Soru Bankası,1,0,53,11
+61,AYT Matematik Soru Bankası,1,0,56,11
+62,TYT Matematik Soru Bankası,0,0,56,10
+63,MÖF,0,11,55,
+64,TYT Geometri Soru Bankası,0,1,52,10
+65,TYT Geometri Soru Bankası,0,1,54,10
+66,AYT Geometri Soru Bankası,1,1,54,11
+67,AYT Geometri Soru Bankası,1,1,52,11
+102,Problemler,0,11,102,
+103,Geometri Soru Bankası,0,1,55,
+104,Geometri Soru Bankası,0,1,103,
+105,Geometri Soru Bankası,2,1,53,
+107,Tyt kimya soru bankası,0,3,104,10
+108,"3D TYT Matematik Soru Bankası",0,0,56,10

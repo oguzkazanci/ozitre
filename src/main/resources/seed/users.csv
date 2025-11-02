@@ -1,0 +1,16 @@
+"user_id","firstname","lastname","user_password","user_address","user_last_password","user_mail","user_phone_number","username"
+1,Oğuz,Kazancı,$2a$10$hrVBMLrnucDNuppqfBtOxO2EBFefADFzkEN0x9dDVtAuYuJ4fsly6,Istanbul,$2a$10$jP8IOvhiwuLiDz2x.sUQZ.tqOFNI.gDUNCVsOYTwHNjJyecsdEQm.,safaoguz1@gmail.com,"0500 000 00 00",oguz.kazanci
+2,Sefa oğuz,Kazancı,$2a$10$cPTvHo8nAJKoEfS9je4A3OKC9LbLK9/Nqwi9jHVcA5moE33dFY/Ca,Gündüz sk,,afeskazanci@gmail.com,"05330558475",sefaoguz.kazanci
+5,Sefa oğuz,Kazancı,$2a$10$8RRI/rQLLxDWDBiO.3E/.eXXPxsbLZTwYhUICw9EReHFHavKRCHDa,,,afeskazanci@gmail.com,,sefaoguz.kazanci
+7,Elif,Kazancı,$2a$10$mzwOCpeuKF2.gdi5xifGm.wMbseT6.ju4aGA0QfPIH2TPrgBZkDCy,Gündüz sk. no:1 iç kapı no:9,,elf.erc11@gmail.com,"05414877042",elif.kazanci
+9,Ahmet,Mehmet,$2a$10$BpQZj2coz20iIUaZaXl23O1dqFy445veCGboUlYrRuIrUQiJaXlYC,Gündüz sk. no:1 iç kapı no:9,,afeskazanci@gmail.com,"05330558475",ahmet.mehmet
+11,Erman,Yaşar,$2a$10$FygdeL9pfUPSVuCMq3V66OUSKNosE0siJlrKpoJKV.ot5iUrygyh2,Uşak,,afeskazanci@gmail.com,"05330558475",erman.yasar
+13,Emre,Özcan,$2a$10$g0dFkxM2hI3S4o1mRBMHheFhq/UktkpGjwfR9awfrCb6duEWDWRuK,Kartal,,,"05330558475",emre.ozcan
+15,Hasan,Kaşıkçı,$2a$10$ULEv1VPt87YONz3fkj6DIOj.d7xcFL3fltgJHl9Zi0Sb5hVbjCBBO,Htalks,,hakasikci@gmail.com,"",hasan.kasikci
+17,Deneme,Sdf,$2a$10$kSYXQM.NcI6ZHNSV67phG.3Hj/b.DG5JKC.ENGk/qyFm4qjW/721W,Dsa,,ds,"5555",deneme.sdf
+19,Deas,Dsa,$2a$10$c7qzPgRQ5bcbqfC6cwl56e0.gu5Aw14EIDq4T8MxWjyJNg5BA9ae2,Dsa,,dsa,"332",deas.dsa
+21,Sda,Fasd,$2a$10$AwP36K5DtcIpFxRAIJNIiezHE/M2/Rhq0au6ROlbbI6jY2CM9TaPu,Sda,,dsa,"442",sda.fasd
+23,Dsa,Dsa,$2a$10$pjEEPkAHPLzhwSZuDX1yBe7PP7OnCpqn1js29CWoy0sQyVdTvCYV6,Dsa,,dsa,"321",dsa.dsa
+25,Dsa,Dsa,$2a$10$aoc8Ms/QZ1NgkMt7dGxk4eHKwwWU/D01OphPEuaJ1aygiwjaaAZ9S,Sda,,dsa,"312",dsa.dsa
+27,Fasd,Vca,$2a$10$uyRUcxVIHBz0sMIzrQclIul55X2ThVJQItTONvK7z.92gDbC/kaIy,Dsa,,dsa,"31",fasd.vca
+29,Dsavcx,Saxa,$2a$10$WvHXVA3Wl4ago6q83yYG2O.aUHqfczy08M8of8uaKy10rRge7l1fO,,,"","421",dsavcx.saxa

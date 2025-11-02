@@ -19,7 +19,7 @@ public class DataSourceConfig {
         return dataSource;
     }
 */
-    @Bean
+ /*   @Bean
     public DataSource dataSource() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
         dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
@@ -29,7 +29,7 @@ public class DataSourceConfig {
 
         return dataSource;
     }
-/*
+
     @Bean
     public DataSource dataSource() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
@@ -40,7 +40,7 @@ public class DataSourceConfig {
 
         return dataSource;
     }
-
+*/
     @Bean
     public DataSource dataSource() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
@@ -49,5 +49,5 @@ public class DataSourceConfig {
         dataSource.setUsername("root");
         dataSource.setPassword("devosoft1");
         return dataSource;
-    }*/
+    }
 }
