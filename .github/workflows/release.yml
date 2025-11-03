@@ -2,10 +2,10 @@ name: Build & Release (ozitre + trendders-ui)
 
 on:
   push:
-    tags: ["v*"]   # v1.0.0 gibi tag atınca release çıkar
+    tags: ["v*"]
 
 permissions:
-  contents: write  # release'e asset yüklemek için gerekli
+  contents: write
 
 jobs:
   build:
@@ -20,7 +20,6 @@ jobs:
           repository: oguzkazanci/trendders-ui
           path: trendders-ui
 
-      # Node
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -30,7 +29,6 @@ jobs:
             trendders-ui/package-lock.json
             trendders-ui/package.json
 
-      # Lockfile varsa npm ci, yoksa npm install
       - name: Install deps
         working-directory: trendders-ui
         shell: pwsh
@@ -45,10 +43,8 @@ jobs:
         working-directory: trendders-ui
         shell: pwsh
         run: |
-          # package.json'da "build" script'in varsa önce onu dener, yoksa Angular CLI ile derler
           npm run build --if-present || npx -y @angular/cli@latest build --configuration production
 
-      # --- DIAGNOSTIC: UI çıktılarını göster (ilk sefer için yararlı) ---
       - name: Debug UI outputs
         working-directory: trendders-ui
         shell: pwsh
@@ -72,17 +68,14 @@ jobs:
             $_.DirectoryName
           } | Sort-Object -Unique | ForEach-Object { Write-Host $_ }
 
-      # UI çıktısını ozitre static'e kopyala (index.html'e göre otomatik bulur)
       - name: Copy UI build into ozitre static
         shell: pwsh
         run: |
           $static = "src\main\resources\static"
           if (-not (Test-Path $static)) { New-Item -ItemType Directory -Path $static | Out-Null }
 
-          # Eski dosyaları temizle (stale asset kalmasın)
           Get-ChildItem $static -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
-          # trendders-ui altında index.html içeren klasörleri bul
           $indexDirs = Get-ChildItem "trendders-ui" -Recurse -Filter index.html -ErrorAction SilentlyContinue `
             | ForEach-Object { $_.Directory } `
             | Sort-Object LastWriteTime -Descending
@@ -92,12 +85,10 @@ jobs:
             exit 1
           }
 
-          # En güncel olan klasörü seç
           $srcDir = $indexDirs[0].FullName
           Write-Host "Copying from: $srcDir"
           Copy-Item (Join-Path $srcDir "*") $static -Recurse -Force
 
-      # Java (pom.xml kökte olduğu için working-directory yok)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
